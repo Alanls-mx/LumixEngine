@@ -81,6 +81,13 @@ export const securityHeaders: RequestHandler = (_request, response, next) => {
 
 export const rejectUnknownOrigin: RequestHandler = (request, response, next) => {
   const origin = request.get('origin');
+  const isPublicWhatsAppRedirect =
+    origin === 'null' && request.method === 'GET' && request.path.startsWith('/api/whatsapp/');
+
+  if (isPublicWhatsAppRedirect) {
+    next();
+    return;
+  }
 
   if (origin && !isAllowedOrigin(origin)) {
     response.status(403).json({
