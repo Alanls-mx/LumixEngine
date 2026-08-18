@@ -20,7 +20,7 @@ services:
       - key: REQUIRE_TRUSTED_ORIGIN
         value: "true"
       - key: CORS_ORIGINS
-        value: https://lumixengine.com,https://www.lumixengine.com,https://lumixengine-frontend.onrender.com
+        value: https://lumixengine.com,https://www.lumixengine.com
       - key: WHATSAPP_PHONE
         value: "5512981157296"
 
