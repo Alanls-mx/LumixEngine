@@ -5,13 +5,26 @@ type LeadCaptureBody = {
   email?: unknown;
   phone?: unknown;
   source?: unknown;
+  companyWebsite?: unknown;
 };
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const phoneAllowedPattern = /^[\d\s()+.-]+$/;
+const allowedLeadFields = new Set(['email', 'phone', 'source', 'companyWebsite']);
+const emailPattern = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/i;
+const phoneAllowedPattern = /^[\d\s()+.-]{10,24}$/;
+const sourcePattern = /^[\w\s./:-]{1,80}$/;
 
 function normalizePhone(value: string) {
-  return value.replace(/\D/g, '');
+  const digits = value.replace(/\D/g, '');
+
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    return digits;
+  }
+
+  if (digits.length === 10 || digits.length === 11) {
+    return `55${digits}`;
+  }
+
+  return digits;
 }
 
 function isPlausibleEmail(value: string) {
@@ -19,18 +32,25 @@ function isPlausibleEmail(value: string) {
 
   return (
     normalizedEmail.length <= 160 &&
+    normalizedEmail.length >= 6 &&
     emailPattern.test(normalizedEmail) &&
-    !normalizedEmail.includes('..')
+    !normalizedEmail.includes('..') &&
+    !normalizedEmail.startsWith('.') &&
+    !normalizedEmail.endsWith('.')
   );
 }
 
 function isPlausiblePhone(value: string) {
   const digits = normalizePhone(value);
+  const nationalDigits = digits.startsWith('55') ? digits.slice(2) : digits;
+  const areaCode = Number(nationalDigits.slice(0, 2));
   const hasAllowedCharacters = phoneAllowedPattern.test(value);
-  const hasValidLength = digits.length >= 10 && digits.length <= 11;
-  const isRepeatedDigit = /^(\d)\1+$/.test(digits);
+  const hasValidLength = digits.length === 12 || digits.length === 13;
+  const hasBrazilCountryCode = digits.startsWith('55');
+  const hasValidAreaCode = areaCode >= 11 && areaCode <= 99;
+  const isRepeatedDigit = /^(\d)\1+$/.test(nationalDigits);
 
-  return hasAllowedCharacters && hasValidLength && !isRepeatedDigit;
+  return hasAllowedCharacters && hasValidLength && hasBrazilCountryCode && hasValidAreaCode && !isRepeatedDigit;
 }
 
 function resolveEmail(value: unknown): string | null {
@@ -62,6 +82,30 @@ function resolvePhone(value: unknown): string | null {
 }
 
 export async function captureLead(request: Request<unknown, unknown, LeadCaptureBody>, response: Response) {
+  if (!request.body || typeof request.body !== 'object' || Array.isArray(request.body)) {
+    return response.status(400).json({
+      ok: false,
+      message: 'Dados do formulário inválidos.',
+    });
+  }
+
+  const payloadKeys = Object.keys(request.body);
+
+  if (payloadKeys.some((key) => !allowedLeadFields.has(key))) {
+    return response.status(400).json({
+      ok: false,
+      message: 'Dados do formulário inválidos.',
+    });
+  }
+
+  if (typeof request.body.companyWebsite === 'string' && request.body.companyWebsite.trim().length > 0) {
+    return response.status(200).json({
+      ok: true,
+      message: 'Solicitação recebida! Em breve entraremos em contato.',
+      leadId: 'queued',
+    });
+  }
+
   const email = resolveEmail(request.body.email);
   const phone = resolvePhone(request.body.phone);
 
@@ -76,7 +120,10 @@ export async function captureLead(request: Request<unknown, unknown, LeadCapture
     });
   }
 
-  const source = typeof request.body.source === 'string' ? request.body.source.slice(0, 80) : 'lead_capture';
+  const source =
+    typeof request.body.source === 'string' && sourcePattern.test(request.body.source.trim())
+      ? request.body.source.trim()
+      : 'lead_capture';
 
   const lead = await saveLead({
     email,

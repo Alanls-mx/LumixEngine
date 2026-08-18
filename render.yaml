@@ -10,6 +10,7 @@ services:
     autoDeployTrigger: commit
     domains:
       - s2api.lumixengine.com
+    renderSubdomainPolicy: disabled
     envVars:
       - key: NODE_ENV
         value: production
@@ -35,6 +36,7 @@ services:
     domains:
       - lumixengine.com
       - www.lumixengine.com
+    renderSubdomainPolicy: disabled
     envVars:
       - key: VITE_API_BASE_URL
         value: https://s2api.lumixengine.com
@@ -48,6 +50,15 @@ services:
         destination: /index.html
     headers:
       - path: /*
+        name: Content-Security-Policy
+        value: default-src 'self'; script-src 'self' https://www.googletagmanager.com https://connect.facebook.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.google-analytics.com https://www.facebook.com https://images.unsplash.com; connect-src 'self' https://s2api.lumixengine.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.facebook.com https://connect.facebook.net; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
         name: X-Content-Type-Options
         value: nosniff
       - path: /*
@@ -56,3 +67,6 @@ services:
       - path: /*
         name: Permissions-Policy
         value: camera=(), microphone=(), geolocation=(), payment=()
+      - path: /*
+        name: Cross-Origin-Opener-Policy
+        value: same-origin

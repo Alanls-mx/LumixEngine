@@ -6,6 +6,7 @@ type LeadCaptureRequest = {
   email: string;
   phone: string;
   source: string;
+  companyWebsite?: string;
 };
 
 type LeadCaptureResponse = {

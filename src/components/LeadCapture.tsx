@@ -43,6 +43,7 @@ function isValidPhone(value: string) {
 export function LeadCapture() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [companyWebsite, setCompanyWebsite] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -64,11 +65,13 @@ export function LeadCapture() {
         email,
         phone: normalizePhone(phone),
         source: 'lead_capture_section',
+        companyWebsite,
       });
 
       setIsSubmitted(true);
       setEmail('');
       setPhone('');
+      setCompanyWebsite('');
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -107,6 +110,19 @@ export function LeadCapture() {
 
           <div>
             <form className="grid gap-3" onSubmit={handleSubmit} autoComplete="off" noValidate>
+              <div className="hidden" aria-hidden="true">
+                <label htmlFor="lead-company-website">Site da empresa</label>
+                <input
+                  id="lead-company-website"
+                  name="companyWebsite"
+                  type="text"
+                  tabIndex={-1}
+                  value={companyWebsite}
+                  onChange={(event) => setCompanyWebsite(event.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-xs font-extrabold uppercase text-slate-300" htmlFor="lead-email">
