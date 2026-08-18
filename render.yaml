@@ -8,6 +8,8 @@ services:
     startCommand: npm run start:server:prod
     healthCheckPath: /api/health
     autoDeployTrigger: commit
+    domains:
+      - s2api.lumixengine.com
     envVars:
       - key: NODE_ENV
         value: production
@@ -35,7 +37,7 @@ services:
       - www.lumixengine.com
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://lumixengine-api.onrender.com
+        value: https://s2api.lumixengine.com
       - key: VITE_GA_ID
         sync: false
       - key: VITE_META_PIXEL_ID
