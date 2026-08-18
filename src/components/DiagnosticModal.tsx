@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, MessageCircle, Send, X } from 'lucide-react';
+import { resolveApiUrl } from '../lib/apiBaseUrl';
 import { trackEvent } from '../lib/tracking';
 
 type DiagnosticModalProps = {
@@ -46,7 +47,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
       'Quero entender qual estrutura faz sentido para minha operação: site, loja, sistema, automação ou integração.',
     ].join('\n');
 
-    return `/api/whatsapp/diagnostic?text=${encodeURIComponent(message)}`;
+    return resolveApiUrl(`/api/whatsapp/diagnostic?text=${encodeURIComponent(message)}`);
   }, [formState]);
 
   useEffect(() => {

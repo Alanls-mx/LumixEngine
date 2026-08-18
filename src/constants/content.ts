@@ -1,3 +1,5 @@
+import { resolveApiUrl } from '../lib/apiBaseUrl';
+
 export type WhatsAppLinkKey = 'budget' | 'automation';
 
 export type CompanyConfig = {
@@ -38,8 +40,8 @@ const whatsappMessages: Record<WhatsAppLinkKey, string> = {
 };
 
 export const whatsappLinks: Record<WhatsAppLinkKey, string> = {
-  budget: `/api/whatsapp/budget?text=${encodeMessage(whatsappMessages.budget)}`,
-  automation: `/api/whatsapp/budget?text=${encodeMessage(whatsappMessages.automation)}`,
+  budget: resolveApiUrl(`/api/whatsapp/budget?text=${encodeMessage(whatsappMessages.budget)}`),
+  automation: resolveApiUrl(`/api/whatsapp/budget?text=${encodeMessage(whatsappMessages.automation)}`),
 };
 
 export const heroContent = {

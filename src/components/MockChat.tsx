@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Video,
 } from 'lucide-react';
+import { resolveApiUrl } from '../lib/apiBaseUrl';
 import { getScenarioSimulation } from '../services/api';
 import type { ChatMessage, ScenarioId, ScenarioResponse } from '../types/scenario';
 
@@ -1045,7 +1046,7 @@ function CheckoutCard({ message, isCopied, onCopyPix }: CheckoutCardProps) {
       {message.checkoutUrl ? (
         <a
           className="mt-3 flex w-full items-center justify-center rounded-xl border border-[#00A884]/35 bg-white px-3 py-2 text-sm font-extrabold text-[#008069] transition hover:bg-[#e7fce3]"
-          href={message.checkoutUrl}
+          href={resolveApiUrl(message.checkoutUrl)}
           target="_blank"
           rel="noreferrer"
         >

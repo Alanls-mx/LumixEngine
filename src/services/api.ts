@@ -1,6 +1,5 @@
 import type { ScenarioId, ScenarioResponse, ScenarioSummary } from '../types/scenario';
-
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '';
+import { resolveApiUrl } from '../lib/apiBaseUrl';
 
 type LeadCaptureRequest = {
   email: string;
@@ -16,7 +15,7 @@ type LeadCaptureResponse = {
 };
 
 async function requestJson<TResponse>(path: string, init?: RequestInit): Promise<TResponse> {
-  const response = await fetch(`${apiBaseUrl}${path}`, init);
+  const response = await fetch(resolveApiUrl(path), init);
 
   if (!response.ok) {
     const errorPayload = (await response.json().catch(() => null)) as { message?: string } | null;
