@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1254" height="1254" viewBox="0 0 1254 1254"
+     role="img" aria-label="LumixEngine icon">
+  <defs>
+    <linearGradient id="lumixGradient" x1="18%" y1="18%" x2="88%" y2="82%">
+      <stop offset="0%" stop-color="#A72BFF"/>
+      <stop offset="27%" stop-color="#7A36FF"/>
+      <stop offset="53%" stop-color="#465CFF"/>
+      <stop offset="78%" stop-color="#159DFE"/>
+      <stop offset="100%" stop-color="#08DDF1"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#lumixGradient)">
+    <path d="M 277 331 L 259 357 L 251 373 L 243 396 L 237 429 L 237 784 L 245 826 L 260 861 L 284 894 L 309 917 L 329 930 L 353 941 L 377 948 L 401 952 L 946 952 L 969 947 L 995 936 L 1019 919 L 1043 892 L 1054 872 L 1063 846 L 1067 817 L 1066 790 L 476 790 L 464 787 L 451 780 L 436 765 L 427 742 L 427 272 L 385 273 L 348 282 L 309 302 Z"/><path d="M 544 717 L 946 718 L 968 714 L 997 702 L 1015 690 L 1031 675 L 1044 658 L 1058 631 L 1063 615 L 1067 591 L 1067 556 L 662 555 L 632 561 L 611 570 L 589 585 L 576 598 L 563 616 L 550 645 L 546 662 Z"/><path d="M 552 487 L 928 488 L 955 487 L 976 482 L 994 475 L 1021 457 L 1040 437 L 1050 422 L 1060 401 L 1067 374 L 1068 325 L 674 324 L 647 329 L 617 342 L 600 354 L 581 373 L 572 386 L 561 407 L 554 431 L 552 445 Z"/>
+  </g>
+</svg>

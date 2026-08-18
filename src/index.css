@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-width: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.16), transparent 34rem),
+      radial-gradient(circle at 12% 22%, rgba(20, 184, 166, 0.1), transparent 26rem),
+      #090D16;
+    color: #ffffff;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer utilities {
+  .hero-glow::before {
+    content: "";
+    position: absolute;
+    width: min(44rem, 90vw);
+    height: min(44rem, 90vw);
+    top: -18rem;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 9999px;
+    background: radial-gradient(
+      circle,
+      rgba(16, 185, 129, 0.26),
+      rgba(20, 184, 166, 0.1) 42%,
+      transparent 70%
+    );
+    filter: blur(58px);
+    opacity: 0.8;
+    pointer-events: none;
+  }
+
+  .glass-nav {
+    background: rgba(9, 13, 22, 0.82);
+    border-bottom: 1px solid rgba(30, 41, 59, 0.82);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  .overflow-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+}
