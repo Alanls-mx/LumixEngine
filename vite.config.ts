@@ -7,7 +7,7 @@ const productionCsp = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: https://www.google-analytics.com https://www.facebook.com https://images.unsplash.com",
-  "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.facebook.com",
+  "connect-src 'self' https://lumixengine-api.onrender.com https://lumixengine.com https://www.lumixengine.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.facebook.com",
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
