@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, MessageCircle } from 'lucide-react';
 import { heroContent, whatsappLinks } from '../constants/content';
 import { MockChat } from './MockChat';
 
@@ -8,7 +8,11 @@ const fadeUp = {
   visible: { opacity: 1, y: 0 },
 };
 
-export function Hero() {
+type HeroProps = {
+  onOpenBudgetForm: () => void;
+};
+
+export function Hero({ onOpenBudgetForm }: HeroProps) {
   return (
     <section
       className="hero-glow relative overflow-hidden px-3 pb-14 pt-24 min-[360px]:px-5 min-[360px]:pb-16 md:px-8 md:pb-20 md:pt-28"
@@ -47,22 +51,29 @@ export function Hero() {
           </motion.p>
 
           <motion.div className="mt-9 flex flex-col gap-4 sm:flex-row" variants={fadeUp}>
-            <a
-              href={whatsappLinks.budget}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={onOpenBudgetForm}
               className="hidden items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-base font-semibold text-emerald-950 shadow-[0_18px_60px_rgba(16,185,129,0.24)] transition-all duration-300 hover:-translate-y-1 hover:bg-emerald-400 hover:shadow-[0_22px_70px_rgba(16,185,129,0.30)] focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-night min-[360px]:inline-flex"
             >
               {heroContent.primaryCta}
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-            </a>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenBudgetForm}
+              className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-extrabold text-emerald-950 shadow-[0_18px_60px_rgba(16,185,129,0.24)] transition-all duration-300 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-night min-[360px]:hidden"
+            >
+              Solicitar Proposta
+            </button>
             <a
               href={whatsappLinks.budget}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-extrabold text-emerald-950 shadow-[0_18px_60px_rgba(16,185,129,0.24)] transition-all duration-300 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-night min-[360px]:hidden"
+              className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-extrabold text-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400/40 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-night min-[360px]:px-6 min-[360px]:text-base"
             >
-              Solicitar Proposta
+              Conversar no WhatsApp
+              <MessageCircle className="ml-2 h-4 w-4 text-emerald-300" aria-hidden="true" />
             </a>
           </motion.div>
 

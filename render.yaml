@@ -26,6 +26,8 @@ services:
         value: https://lumixengine.com,https://www.lumixengine.com
       - key: WHATSAPP_PHONE
         value: "5512981157296"
+      - key: LEAD_WEBHOOK_URL
+        sync: false
 
   - type: web
     name: lumixengine-frontend

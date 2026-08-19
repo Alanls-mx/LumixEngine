@@ -1,9 +1,12 @@
 import { useCallback, useState, type MouseEvent } from 'react';
 import { Menu } from 'lucide-react';
 import fullLogo from '../../LogoSF.png';
-import { whatsappLinks } from '../constants/content';
 
-export function HeaderMenu() {
+type HeaderMenuProps = {
+  onOpenBudgetForm: () => void;
+};
+
+export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const mobileMenuId = 'mobile-menu';
 
@@ -61,14 +64,13 @@ export function HeaderMenu() {
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-2">
-          <a
-            href={whatsappLinks.budget}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={onOpenBudgetForm}
             className="hidden rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 shadow-[0_18px_46px_rgba(16,185,129,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-night sm:inline-flex"
           >
             Solicitar Proposta
-          </a>
+          </button>
 
           <button
             className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-800 bg-panel text-white transition hover:border-emerald-500/30 lg:hidden"
@@ -109,14 +111,16 @@ export function HeaderMenu() {
           >
             Contato
           </a>
-          <a
-            href={whatsappLinks.budget}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="col-span-3 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400"
+          <button
+            type="button"
+            onClick={() => {
+              setIsMenuOpen(false);
+              onOpenBudgetForm();
+            }}
+            className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400 min-[360px]:col-span-3"
           >
             Solicitar Proposta
-          </a>
+          </button>
         </div>
       </div>
     </header>

@@ -1,82 +1,85 @@
 import { FormEvent, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Send } from 'lucide-react';
-import { captureLead } from '../services/api';
+import { CheckCircle2, MessageCircle, Send } from 'lucide-react';
+import { whatsappLinks } from '../constants/content';
+import { formatPhone, isTextFilled, isValidEmail, isValidPhone, toBrazilianE164 } from '../lib/leadForm';
+import { submitLeadWebhook } from '../services/leadWebhook';
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const maxPhoneDigits = 11;
+type QuickContactForm = {
+  fullName: string;
+  email: string;
+  phone: string;
+  message: string;
+};
 
-function normalizePhone(value: string) {
-  return value.replace(/\D/g, '');
-}
-
-function formatPhone(value: string) {
-  const digits = normalizePhone(value).slice(0, maxPhoneDigits);
-
-  if (digits.length <= 2) {
-    return digits;
-  }
-
-  if (digits.length <= 6) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  }
-
-  if (digits.length <= 10) {
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  }
-
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-}
-
-function isValidEmail(value: string) {
-  const email = value.trim().toLowerCase();
-
-  return email.length <= 160 && emailPattern.test(email) && !email.includes('..');
-}
-
-function isValidPhone(value: string) {
-  const digits = normalizePhone(value);
-
-  return digits.length >= 10 && digits.length <= maxPhoneDigits && !/^(\d)\1+$/.test(digits);
-}
+const initialForm: QuickContactForm = {
+  fullName: '',
+  email: '',
+  phone: '',
+  message: '',
+};
 
 export function LeadCapture() {
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [companyWebsite, setCompanyWebsite] = useState('');
+  const [formState, setFormState] = useState<QuickContactForm>(initialForm);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const updateField = <Key extends keyof QuickContactForm>(field: Key, value: QuickContactForm[Key]) => {
+    setFormState((current) => ({
+      ...current,
+      [field]: value,
+    }));
+    setIsSubmitted(false);
+    setErrorMessage(null);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isValidEmail(email) || !isValidPhone(phone)) {
-      setErrorMessage('Informe um e-mail válido e um telefone/WhatsApp com DDD.');
+    const fullName = formState.fullName.trim();
+    const email = formState.email.trim().toLowerCase();
+    const message = formState.message.trim();
+
+    if (!isTextFilled(fullName, 3)) {
+      setErrorMessage('Informe seu nome completo para continuarmos.');
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setErrorMessage('Informe um e-mail válido.');
+      return;
+    }
+
+    if (!isValidPhone(formState.phone)) {
+      setErrorMessage('Informe um WhatsApp com DDD. Exemplo: (11) 99999-9999.');
+      return;
+    }
+
+    if (!isTextFilled(message, 10)) {
+      setErrorMessage('Escreva uma mensagem com um pouco mais de contexto.');
       return;
     }
 
     setIsSubmitting(true);
-    setIsSubmitted(false);
     setErrorMessage(null);
 
     try {
-      await captureLead({
+      await submitLeadWebhook({
+        nome: fullName,
         email,
-        phone: normalizePhone(phone),
-        source: 'lead_capture_section',
-        companyWebsite,
+        telefone: toBrazilianE164(formState.phone),
+        conteudo: `[Contato Rápido] ${message}`,
+        origem: 'SITE',
       });
 
       setIsSubmitted(true);
-      setEmail('');
-      setPhone('');
-      setCompanyWebsite('');
+      setFormState(initialForm);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : 'Não foi possível salvar sua solicitação agora. Tente novamente em instantes.',
+          : 'Não foi possível enviar sua solicitação agora. Tente novamente em instantes.',
       );
     } finally {
       setIsSubmitting(false);
@@ -90,107 +93,115 @@ export function LeadCapture() {
       aria-labelledby="lead-capture-title"
     >
       <motion.div
-        className="relative mx-auto max-w-5xl overflow-hidden rounded-xl border border-slate-800 bg-panel p-6 shadow-soft md:p-8"
+        className="relative mx-auto max-w-6xl overflow-hidden rounded-xl border border-slate-800 bg-panel p-6 shadow-soft md:p-8"
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-80px' }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-        <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-0 h-44 w-44 rounded-full bg-emerald-500/10 blur-3xl" />
 
-        <div className="relative grid gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+        <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div>
             <h2 id="lead-capture-title" className="text-[clamp(1.5rem,6vw,2.25rem)] font-extrabold tracking-normal text-white md:text-4xl">
-              Tem um processo que poderia funcionar melhor?
+              Contato rápido com a LumixEngine
             </h2>
             <p className="mt-4 text-base leading-7 text-slate-300 md:text-lg">
-              Envie e-mail e WhatsApp com DDD. Analisamos o cenário e retornamos com uma proposta de site, sistema, automação ou integração adequada para a sua empresa.
+              Envie seus dados e uma mensagem objetiva. Um especialista retorna para entender se sua empresa precisa de site, loja, sistema, automação ou integração.
             </p>
+            <div className="mt-6 grid gap-3 text-sm font-semibold text-slate-300 sm:grid-cols-2 lg:grid-cols-1">
+              <p className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">Resposta comercial pelo WhatsApp informado.</p>
+              <p className="rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">Dados enviados direto ao LumixEngine App.</p>
+            </div>
+            <a
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-5 py-3 text-sm font-extrabold text-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400/40 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-night"
+              href={whatsappLinks.budget}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Conversar direto no WhatsApp
+              <MessageCircle className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            </a>
           </div>
 
           <div>
-            <form className="grid gap-3" onSubmit={handleSubmit} autoComplete="off" noValidate>
-              <div className="hidden" aria-hidden="true">
-                <label htmlFor="lead-company-website">Site da empresa</label>
-                <input
-                  id="lead-company-website"
-                  name="companyWebsite"
-                  type="text"
-                  tabIndex={-1}
-                  value={companyWebsite}
-                  onChange={(event) => setCompanyWebsite(event.target.value)}
-                  autoComplete="off"
-                />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-xs font-extrabold uppercase text-slate-300" htmlFor="lead-email">
-                    E-mail
-                  </label>
+            <form className="grid gap-4" onSubmit={handleSubmit} autoComplete="off" noValidate>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-extrabold uppercase text-slate-300">Nome completo</span>
                   <input
-                    id="lead-email"
+                    className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
+                    type="text"
+                    value={formState.fullName}
+                    onChange={(event) => updateField('fullName', event.target.value)}
+                    placeholder="Seu nome"
+                    autoComplete="off"
+                    disabled={isSubmitting}
+                    required
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-xs font-extrabold uppercase text-slate-300">E-mail</span>
+                  <input
                     className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
                     type="email"
-                    value={email}
-                    onChange={(event) => {
-                      setEmail(event.target.value);
-                      setIsSubmitted(false);
-                      setErrorMessage(null);
-                    }}
-                    placeholder="Seu melhor e-mail"
+                    value={formState.email}
+                    onChange={(event) => updateField('email', event.target.value)}
+                    placeholder="seu@email.com"
                     autoComplete="off"
-                    aria-invalid={Boolean(errorMessage && !isValidEmail(email))}
-                    aria-describedby={errorMessage ? 'lead-capture-error' : undefined}
                     disabled={isSubmitting}
                     required
                   />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-xs font-extrabold uppercase text-slate-300" htmlFor="lead-phone">
-                    WhatsApp com DDD
-                  </label>
-                  <input
-                    id="lead-phone"
-                    className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
-                    type="tel"
-                    value={phone}
-                    onChange={(event) => {
-                      setPhone(formatPhone(event.target.value));
-                      setIsSubmitted(false);
-                      setErrorMessage(null);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key.length === 1 && !/\d/.test(event.key)) {
-                        event.preventDefault();
-                      }
-                    }}
-                    placeholder="WhatsApp com DDD"
-                    autoComplete="off"
-                    inputMode="numeric"
-                    maxLength={15}
-                    aria-invalid={Boolean(errorMessage && !isValidPhone(phone))}
-                    aria-describedby={errorMessage ? 'lead-capture-error' : undefined}
-                    disabled={isSubmitting}
-                    required
-                  />
-                </div>
+                </label>
               </div>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-extrabold uppercase text-slate-300">Telefone / WhatsApp</span>
+                <input
+                  className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
+                  type="tel"
+                  value={formState.phone}
+                  onChange={(event) => updateField('phone', formatPhone(event.target.value))}
+                  onKeyDown={(event) => {
+                    if (event.key.length === 1 && !/\d/.test(event.key)) {
+                      event.preventDefault();
+                    }
+                  }}
+                  placeholder="(11) 99999-9999"
+                  autoComplete="off"
+                  inputMode="numeric"
+                  maxLength={15}
+                  disabled={isSubmitting}
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-extrabold uppercase text-slate-300">Sua mensagem</span>
+                <textarea
+                  className="min-h-32 w-full resize-none rounded-lg border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
+                  value={formState.message}
+                  onChange={(event) => updateField('message', event.target.value)}
+                  placeholder="Conte rapidamente o que você precisa melhorar ou construir."
+                  autoComplete="off"
+                  disabled={isSubmitting}
+                  required
+                />
+              </label>
 
               <button
                 className="inline-flex min-h-12 items-center justify-center rounded-lg bg-emerald-500 px-6 text-sm font-extrabold text-emerald-950 shadow-[0_18px_60px_rgba(16,185,129,0.22)] transition-all duration-300 hover:-translate-y-1 hover:bg-emerald-400 hover:shadow-[0_22px_70px_rgba(16,185,129,0.30)] focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-night disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
                 type="submit"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Enviando...' : 'Solicitar Proposta'}
+                {isSubmitting ? 'Enviando...' : 'Enviar Contato Rápido'}
                 <Send className="ml-2 h-4 w-4" aria-hidden="true" />
               </button>
             </form>
 
             {errorMessage ? (
               <motion.p
-                id="lead-capture-error"
                 className="mt-4 text-sm font-bold text-rose-300"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}

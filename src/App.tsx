@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { EcosystemSection } from './components/EcosystemSection';
 import { Hero } from './components/Hero';
 import { FAQ } from './components/FAQ';
 import { Footer } from './components/Footer';
 import { HeaderMenu } from './components/HeaderMenu';
 import { LeadCapture } from './components/LeadCapture';
+import { DiagnosticModal } from './components/DiagnosticModal';
 import { CookieConsent } from './components/CookieConsent';
 import { LegalPage } from './components/LegalPage';
 import { NotFoundPage } from './components/NotFoundPage';
@@ -62,6 +63,7 @@ function setCanonicalUrl(url: string) {
 }
 
 export function App() {
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const currentPath = window.location.pathname;
   const isHomePage = currentPath === '/';
   const legalPageType =
@@ -88,12 +90,12 @@ export function App() {
 
   return (
     <ScenarioProvider>
-      <HeaderMenu />
+      <HeaderMenu onOpenBudgetForm={() => setIsBudgetModalOpen(true)} />
       {legalPageType ? (
         <LegalPage type={legalPageType} />
       ) : isHomePage ? (
         <main className="overflow-hidden">
-          <Hero />
+          <Hero onOpenBudgetForm={() => setIsBudgetModalOpen(true)} />
           <Solucoes />
           <EcosystemSection />
           <Testimonials />
@@ -105,6 +107,7 @@ export function App() {
       )}
       <Footer />
       <CookieConsent />
+      <DiagnosticModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} />
     </ScenarioProvider>
   );
 }

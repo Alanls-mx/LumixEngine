@@ -9,6 +9,7 @@ import {
 } from './middleware/security.js';
 import { leadsRouter } from './routes/leads.js';
 import { scenariosRouter } from './routes/scenarios.js';
+import { webhookLeadsRouter } from './routes/webhookLeads.js';
 import { whatsappRouter } from './routes/whatsapp.js';
 
 const app = express();
@@ -67,6 +68,23 @@ app.use(
     next();
   },
   leadsRouter,
+);
+app.use(
+  '/api/webhooks',
+  leadRateLimiter,
+  requireTrustedBrowserOrigin(),
+  (request, response, next) => {
+    if (request.method === 'POST' && !request.is('application/json')) {
+      response.status(415).json({
+        ok: false,
+        message: 'Envie os dados do formulário em JSON.',
+      });
+      return;
+    }
+
+    next();
+  },
+  webhookLeadsRouter,
 );
 app.use('/api/whatsapp', whatsappRateLimiter, whatsappRouter);
 
