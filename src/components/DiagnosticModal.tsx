@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ClipboardList, MessageCircle, Send, X } from 'lucide-react';
 import { whatsappLinks } from '../constants/content';
 import { formatPhone, isTextFilled, isValidEmail, isValidPhone, toBrazilianE164 } from '../lib/leadForm';
-import { submitLeadWebhook } from '../services/leadWebhook';
+import { getLeadWebhookErrorMessage, submitLeadWebhook } from '../services/leadWebhook';
 import { trackEvent } from '../lib/tracking';
 
 type DiagnosticModalProps = {
@@ -152,11 +152,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
       setIsSubmitted(true);
       setFormState(initialFormState);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível enviar seu orçamento agora. Tente novamente em instantes.',
-      );
+      setErrorMessage(getLeadWebhookErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }

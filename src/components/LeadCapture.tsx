@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, MessageCircle, Send } from 'lucide-react';
 import { whatsappLinks } from '../constants/content';
 import { formatPhone, isTextFilled, isValidEmail, isValidPhone, toBrazilianE164 } from '../lib/leadForm';
-import { submitLeadWebhook } from '../services/leadWebhook';
+import { getLeadWebhookErrorMessage, submitLeadWebhook } from '../services/leadWebhook';
 
 type QuickContactForm = {
   fullName: string;
@@ -76,11 +76,7 @@ export function LeadCapture() {
       setIsSubmitted(true);
       setFormState(initialForm);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível enviar sua solicitação agora. Tente novamente em instantes.',
-      );
+      setErrorMessage(getLeadWebhookErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }

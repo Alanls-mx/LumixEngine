@@ -34,3 +34,15 @@ export async function submitLeadWebhook(payload: LeadWebhookPayload, signal?: Ab
 
   return response.json().catch(() => ({ ok: true })) as Promise<LeadWebhookResponse>;
 }
+
+export function getLeadWebhookErrorMessage(error: unknown) {
+  if (error instanceof TypeError) {
+    return 'Não foi possível conectar ao LumixEngine App agora. Tente novamente ou converse direto pelo WhatsApp.';
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Não foi possível enviar sua solicitação agora. Tente novamente em instantes.';
+}
