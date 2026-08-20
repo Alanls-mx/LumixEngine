@@ -1,16 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Cookie, Settings, X } from 'lucide-react';
-
-const cookieConsentKey = 'cookie_consent';
-const openCookieSettingsEvent = 'lumixengine:open-cookie-settings';
+import { cookieConsentKey, openCookieSettingsEvent } from '../lib/cookieSettings';
 
 function hasCookieConsent() {
   return window.localStorage.getItem(cookieConsentKey) === 'true';
-}
-
-export function openCookieSettings() {
-  window.dispatchEvent(new CustomEvent(openCookieSettingsEvent));
 }
 
 export function CookieConsent() {

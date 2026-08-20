@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { Github, Instagram, Linkedin } from 'lucide-react';
 import wordMarkLogo from '../../WordMark.png';
-import { openCookieSettings } from './CookieConsent';
+import { openCookieSettings } from '../lib/cookieSettings';
 
 type SocialLink = {
   label: string;

@@ -1,12 +1,8 @@
-import { motion } from 'framer-motion';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle2, MessageCircle } from 'lucide-react';
 import { heroContent, whatsappLinks } from '../constants/content';
-import { MockChat } from './MockChat';
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 18 },
-  visible: { opacity: 1, y: 0 },
-};
+const MockChat = lazy(() => import('./MockChat').then((module) => ({ default: module.MockChat })));
 
 type HeroProps = {
   onOpenBudgetForm: () => void;
@@ -19,38 +15,29 @@ export function Hero({ onOpenBudgetForm }: HeroProps) {
       aria-labelledby="hero-title"
     >
       <div className="relative mx-auto grid max-w-7xl items-center gap-10 md:gap-12 lg:grid-cols-[1.05fr_0.95fr]">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          transition={{ staggerChildren: 0.08 }}
-        >
-          <motion.div
-            className="mb-6 inline-flex items-center gap-3 text-sm font-extrabold text-emerald-100"
-            variants={fadeUp}
-          >
+        <div>
+          <div className="hero-reveal mb-6 inline-flex items-center gap-3 text-sm font-extrabold text-emerald-100">
             <span className="relative flex h-2 w-2" aria-hidden="true">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
             </span>
             Projetos digitais para operações reais
-          </motion.div>
+          </div>
 
-          <motion.h1
+          <h1
             id="hero-title"
             className="max-w-5xl break-words text-[clamp(2rem,11vw,3.75rem)] font-extrabold leading-tight tracking-normal text-white sm:text-5xl lg:text-6xl"
-            variants={fadeUp}
           >
             {heroContent.title}
-          </motion.h1>
+          </h1>
 
-          <motion.p
+          <p
             className="mt-5 max-w-2xl text-base leading-7 text-slate-300 min-[360px]:mt-6 min-[360px]:text-lg min-[360px]:leading-8 md:text-xl"
-            variants={fadeUp}
           >
             {heroContent.subtitle}
-          </motion.p>
+          </p>
 
-          <motion.div className="mt-9 flex flex-col gap-4 sm:flex-row" variants={fadeUp}>
+          <div className="hero-reveal hero-reveal-delay-1 mt-9 flex flex-col gap-4 sm:flex-row">
             <button
               type="button"
               onClick={onOpenBudgetForm}
@@ -75,25 +62,65 @@ export function Hero({ onOpenBudgetForm }: HeroProps) {
               Conversar no WhatsApp
               <MessageCircle className="ml-2 h-4 w-4 text-emerald-300" aria-hidden="true" />
             </a>
-          </motion.div>
+          </div>
 
-          <motion.div
-            className="mt-9 hidden gap-3 text-sm font-semibold text-slate-200 min-[360px]:grid sm:grid-cols-3"
-            variants={fadeUp}
-          >
+          <div className="hero-reveal hero-reveal-delay-2 mt-9 hidden gap-3 text-sm font-semibold text-slate-200 min-[360px]:grid sm:grid-cols-3">
             {heroContent.benefits.map((benefit) => (
               <div className="flex items-center gap-2" key={benefit.label}>
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
                 {benefit.label}
               </div>
             ))}
-          </motion.div>
-        </motion.div>
-
-        <div className="hidden min-[360px]:block">
-          <MockChat />
+          </div>
         </div>
+
+        <DeferredMockChat />
       </div>
     </section>
+  );
+}
+
+function DeferredMockChat() {
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    if (!window.matchMedia('(min-width: 360px)').matches) {
+      return;
+    }
+
+    const load = () => setShouldLoad(true);
+    const idleCallback = 'requestIdleCallback' in window ? window.requestIdleCallback(load, { timeout: 1200 }) : undefined;
+    const timeout = idleCallback === undefined ? window.setTimeout(load, 450) : undefined;
+
+    return () => {
+      if (idleCallback !== undefined && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleCallback);
+      }
+
+      if (timeout !== undefined) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, []);
+
+  return (
+    <div className="hidden min-h-[620px] min-[360px]:block">
+      {shouldLoad ? (
+        <Suspense fallback={<MockChatShell />}>
+          <MockChat />
+        </Suspense>
+      ) : (
+        <MockChatShell />
+      )}
+    </div>
+  );
+}
+
+function MockChatShell() {
+  return (
+    <div
+      className="mx-auto h-[620px] w-full max-w-[390px] rounded-[2.35rem] border border-slate-800 bg-slate-950/60 shadow-[0_28px_90px_rgba(0,0,0,0.36)]"
+      aria-hidden="true"
+    />
   );
 }

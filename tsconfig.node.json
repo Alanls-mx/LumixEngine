@@ -13,5 +13,5 @@
     "moduleDetection": "force",
     "noEmit": true
   },
-  "include": ["vite.config.ts", "tailwind.config.ts", "postcss.config.js"]
+  "include": ["tailwind.config.ts", "postcss.config.js"]
 }

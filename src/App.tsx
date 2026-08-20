@@ -1,17 +1,28 @@
-import { useEffect, useState } from 'react';
-import { EcosystemSection } from './components/EcosystemSection';
+import { lazy, Suspense, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Hero } from './components/Hero';
-import { FAQ } from './components/FAQ';
 import { Footer } from './components/Footer';
 import { HeaderMenu } from './components/HeaderMenu';
-import { LeadCapture } from './components/LeadCapture';
-import { DiagnosticModal } from './components/DiagnosticModal';
-import { CookieConsent } from './components/CookieConsent';
-import { LegalPage } from './components/LegalPage';
-import { NotFoundPage } from './components/NotFoundPage';
-import { Solucoes } from './components/Solucoes';
-import { Testimonials } from './components/Testimonials';
 import { ScenarioProvider } from './context/ScenarioContext';
+
+const Solucoes = lazy(() => import('./components/Solucoes').then((module) => ({ default: module.Solucoes })));
+const EcosystemSection = lazy(() =>
+  import('./components/EcosystemSection').then((module) => ({ default: module.EcosystemSection })),
+);
+const Testimonials = lazy(() =>
+  import('./components/Testimonials').then((module) => ({ default: module.Testimonials })),
+);
+const FAQ = lazy(() => import('./components/FAQ').then((module) => ({ default: module.FAQ })));
+const LeadCapture = lazy(() => import('./components/LeadCapture').then((module) => ({ default: module.LeadCapture })));
+const CookieConsent = lazy(() =>
+  import('./components/CookieConsent').then((module) => ({ default: module.CookieConsent })),
+);
+const DiagnosticModal = lazy(() =>
+  import('./components/DiagnosticModal').then((module) => ({ default: module.DiagnosticModal })),
+);
+const LegalPage = lazy(() => import('./components/LegalPage').then((module) => ({ default: module.LegalPage })));
+const NotFoundPage = lazy(() =>
+  import('./components/NotFoundPage').then((module) => ({ default: module.NotFoundPage })),
+);
 
 const siteUrl = 'https://lumixengine.com';
 
@@ -92,22 +103,80 @@ export function App() {
     <ScenarioProvider>
       <HeaderMenu onOpenBudgetForm={() => setIsBudgetModalOpen(true)} />
       {legalPageType ? (
-        <LegalPage type={legalPageType} />
+        <Suspense fallback={null}>
+          <LegalPage type={legalPageType} />
+        </Suspense>
       ) : isHomePage ? (
         <main className="overflow-hidden">
           <Hero onOpenBudgetForm={() => setIsBudgetModalOpen(true)} />
-          <Solucoes />
-          <EcosystemSection />
-          <Testimonials />
-          <FAQ />
-          <LeadCapture />
+          <DeferredSection minHeight={620}>
+            <Solucoes />
+          </DeferredSection>
+          <DeferredSection minHeight={760}>
+            <EcosystemSection />
+          </DeferredSection>
+          <DeferredSection minHeight={720}>
+            <Testimonials />
+          </DeferredSection>
+          <DeferredSection minHeight={620}>
+            <FAQ />
+          </DeferredSection>
+          <DeferredSection minHeight={520}>
+            <LeadCapture />
+          </DeferredSection>
         </main>
       ) : (
-        <NotFoundPage />
+        <Suspense fallback={null}>
+          <NotFoundPage />
+        </Suspense>
       )}
       <Footer />
-      <CookieConsent />
-      <DiagnosticModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} />
+      <Suspense fallback={null}>
+        <CookieConsent />
+      </Suspense>
+      {isBudgetModalOpen ? (
+        <Suspense fallback={null}>
+          <DiagnosticModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} />
+        </Suspense>
+      ) : null}
     </ScenarioProvider>
+  );
+}
+
+function DeferredSection({ children, minHeight }: { children: ReactNode; minHeight: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    const element = containerRef.current;
+
+    if (!element || shouldRender) {
+      return;
+    }
+
+    if (!('IntersectionObserver' in window)) {
+      setShouldRender(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldRender(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '720px 0px' },
+    );
+
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, [shouldRender]);
+
+  return (
+    <div ref={containerRef} style={shouldRender ? undefined : { minHeight }}>
+      {shouldRender ? <Suspense fallback={<div style={{ minHeight }} aria-hidden="true" />}>{children}</Suspense> : null}
+    </div>
   );
 }
