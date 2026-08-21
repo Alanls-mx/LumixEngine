@@ -56,6 +56,9 @@ function createTransporter(settings: MailSettings = {}) {
       host: config.smtpHost,
       port: config.smtpPort,
       secure: config.smtpPort === 465,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
       auth: {
         user: config.smtpUser,
         pass: config.smtpPass,
