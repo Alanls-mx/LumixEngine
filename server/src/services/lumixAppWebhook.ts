@@ -24,10 +24,15 @@ export type AppLeadWebhookPayload = {
   metadata?: Record<string, string | number | boolean | null>;
 };
 
-const fallbackWebhookUrl = 'http://127.0.0.1:3333/api/webhooks/lead';
+const localWebhookUrl = 'http://127.0.0.1:3333/api/webhooks/lead';
+const productionWebhookUrl = 'https://lumixengine-app-api.onrender.com/api/webhooks/lead';
 
 function getWebhookUrl() {
-  return process.env.LUMIX_APP_WEBHOOK_URL ?? process.env.LEAD_WEBHOOK_URL ?? fallbackWebhookUrl;
+  return (
+    process.env.LUMIX_APP_WEBHOOK_URL ??
+    process.env.LEAD_WEBHOOK_URL ??
+    (process.env.NODE_ENV === 'production' ? productionWebhookUrl : localWebhookUrl)
+  );
 }
 
 export async function forwardLeadToLumixApp(payload: AppLeadWebhookPayload) {
