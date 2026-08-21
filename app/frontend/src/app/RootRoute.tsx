@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Search,
   Settings,
+  ShieldCheck,
 } from 'lucide-react'
 
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel'
@@ -25,14 +26,24 @@ export function RootRoute() {
     <div className="min-h-svh bg-[#f4f7f5] text-slate-950">
       <Toaster richColors position="top-right" />
       <div className="grid min-h-svh lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="hidden border-r border-white/10 bg-[#121821] text-white lg:flex lg:flex-col">
+        <aside className="hidden border-r border-white/10 bg-[#090d16] text-white lg:flex lg:flex-col">
           <div className="flex h-20 items-center gap-3 border-b border-white/10 px-6">
-            <div className="grid size-10 place-items-center rounded-lg bg-emerald-400 text-sm font-black text-slate-950">
-              LX
-            </div>
+            <img
+              src="/assets/lumix-icon-96.webp"
+              alt=""
+              className="size-10 rounded-lg object-contain"
+              width={40}
+              height={40}
+            />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">LumixEngine</p>
-              <p className="truncate text-xs text-slate-400">Operations App</p>
+              <img
+                src="/assets/lumix-logo-header-cropped.webp"
+                alt="LumixEngine"
+                className="h-7 w-auto object-contain"
+                width={162}
+                height={40}
+              />
+              <p className="mt-1 truncate text-xs text-slate-400">CRM, Inbox e Automações</p>
             </div>
           </div>
 
@@ -43,10 +54,11 @@ export function RootRoute() {
           </nav>
 
           <div className="border-t border-white/10 p-4">
-            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">
+            <div className="rounded-lg border border-emerald-400/15 bg-emerald-400/[0.06] p-4">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-emerald-200/80">
+                <ShieldCheck className="size-4" aria-hidden="true" />
                 Status
-              </p>
+              </div>
               <div className="mt-3 flex items-center gap-2">
                 <span className="size-2 rounded-full bg-emerald-400" />
                 <span className="text-sm text-slate-200">Realtime ativo</span>
@@ -59,9 +71,13 @@ export function RootRoute() {
           <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/85 backdrop-blur">
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
               <div className="flex items-center gap-3 lg:hidden">
-                <div className="grid size-9 place-items-center rounded-lg bg-slate-950 text-xs font-black text-white">
-                  LX
-                </div>
+                <img
+                  src="/assets/lumix-icon-96.webp"
+                  alt=""
+                  className="size-9 rounded-lg object-contain"
+                  width={36}
+                  height={36}
+                />
                 <span className="text-sm font-semibold">LumixEngine</span>
               </div>
 
@@ -71,6 +87,14 @@ export function RootRoute() {
               </div>
 
               <div className="ml-auto flex items-center gap-2">
+                <a
+                  className="hidden rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:inline-flex"
+                  href="https://lumixengine.com"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Site institucional
+                </a>
                 <NotificationsPanel />
                 <Button variant="outline" size="icon" aria-label="Configurações" asChild>
                   <Link to="/settings">

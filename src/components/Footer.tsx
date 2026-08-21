@@ -42,9 +42,10 @@ export function Footer() {
           />
         </a>
 
-        <p className="max-w-2xl text-sm leading-6 text-slate-400">
-          Sites, lojas virtuais, sistemas web, automações e integrações sob medida para negócios locais.
-        </p>
+        <div className="max-w-2xl text-sm leading-6 text-slate-400">
+          <p>Sites, lojas virtuais, sistemas web, automações e integrações sob medida para negócios locais.</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500">CNPJ 68.685.237/0001-97</p>
+        </div>
 
         <div className="flex flex-col items-center gap-3 md:items-end">
           <p className="text-sm font-semibold text-slate-400">© 2026 LumixEngine.</p>

@@ -298,6 +298,30 @@ function extractWhatsAppName(body: unknown) {
   );
 }
 
+function extractWhatsAppEvent(body: unknown) {
+  return (
+    getNestedString(body, ["event"]) ??
+    getNestedString(body, ["type"]) ??
+    getNestedString(body, ["data", "event"]) ??
+    getNestedString(body, ["data", "type"])
+  );
+}
+
+function isTechnicalWhatsAppEvent(body: unknown) {
+  const event = extractWhatsAppEvent(body)?.toLowerCase();
+
+  if (!event) {
+    return false;
+  }
+
+  return (
+    event.includes("connection") ||
+    event.includes("qrcode") ||
+    event.includes("status") ||
+    event.includes("presence")
+  );
+}
+
 function settingCategory(key: string) {
   if (key.startsWith("SMTP_") || key === "INTERNAL_LEAD_NOTIFICATION_EMAIL") {
     return "email";
@@ -1093,6 +1117,14 @@ async function webhookWhatsAppRoute(request: { body: unknown }, reply: { status:
   const conteudo = extractWhatsAppText(request.body);
 
   if (!phone || !conteudo) {
+    if (isTechnicalWhatsAppEvent(request.body)) {
+      return {
+        ok: true,
+        ignored: true,
+        event: extractWhatsAppEvent(request.body),
+      };
+    }
+
     return reply.status(400).send({
       error: "invalid_whatsapp_payload",
       message: "Payload sem telefone ou conteúdo de mensagem.",
@@ -1194,6 +1226,7 @@ app.post("/api/webhooks/lead", webhookLeadRoute);
 app.post("/api/webhooks", webhookLeadRoute);
 app.post("/webhooks", webhookLeadRoute);
 app.post("/api/webhooks/whatsapp", webhookWhatsAppRoute);
+app.post("/api/webhooks/whatsapp/:event", webhookWhatsAppRoute);
 
 app.setErrorHandler((error, _request, reply) => {
   if (error instanceof z.ZodError) {
