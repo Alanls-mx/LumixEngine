@@ -6,7 +6,7 @@ services:
     region: oregon
     buildCommand: npm ci && npm run build:server
     startCommand: npm run start:server:prod
-    healthCheckPath: /api/health
+    healthCheckPath: /health
     autoDeployTrigger: commit
     domains:
       - s2api.lumixengine.com
@@ -137,10 +137,10 @@ services:
         sync: false
 
   - type: web
-    name: lumixengine-app-frontend
+    name: lumixengine-app
     runtime: static
-    buildCommand: cd app/frontend && npm ci && npm run build
-    staticPublishPath: app/frontend/dist
+    buildCommand: cd app/frontend && npm ci && npm run build && cd ../.. && mkdir -p app-public && cp -R app/frontend/dist/. app-public/
+    staticPublishPath: app-public
     autoDeployTrigger: commit
     domains:
       - app.lumixengine.com

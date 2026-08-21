@@ -5,6 +5,7 @@ server/data
 server/dist
 app/**/node_modules
 app/**/dist
+app-public
 app/backend/generated
 app/backend/prisma/*.db
 npm-debug.log*
