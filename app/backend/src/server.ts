@@ -17,6 +17,7 @@ import {
 } from "../generated/prisma/client.js";
 import {
   getMailStatus,
+  sendLeadReplyEmail,
   sendLeadWebhookEmails,
   sendTestEmail,
   verifyMailSettings,
@@ -143,6 +144,11 @@ const sendMessageSchema = z.object({
   lead_id: z.string().trim().min(1),
   conteudo: z.string().trim().min(1),
   user_id: z.string().trim().min(1).optional(),
+  channels: z
+    .array(z.enum(["WHATSAPP", "EMAIL"]))
+    .min(1)
+    .optional()
+    .default(["WHATSAPP"]),
 });
 
 const appSettingsSchema = z.object({
@@ -806,11 +812,20 @@ async function sendMessageRoute(request: { body: unknown }, reply: { status: (st
       id: payload.lead_id,
     },
   });
+  const shouldSendWhatsApp = payload.channels.includes("WHATSAPP");
+  const shouldSendEmail = payload.channels.includes("EMAIL");
 
-  if (!lead.telefone) {
+  if (shouldSendWhatsApp && !lead.telefone) {
     return reply.status(400).send({
       error: "missing_phone",
       message: "Lead sem telefone para envio via WhatsApp.",
+    });
+  }
+
+  if (shouldSendEmail && !lead.email && !shouldSendWhatsApp) {
+    return reply.status(400).send({
+      error: "missing_email",
+      message: "Lead sem e-mail para envio.",
     });
   }
 
@@ -818,7 +833,7 @@ async function sendMessageRoute(request: { body: unknown }, reply: { status: (st
     data: {
       lead_id: payload.lead_id,
       conteudo: payload.conteudo,
-      origem: MessageOrigem.WHATSAPP,
+      origem: shouldSendWhatsApp ? MessageOrigem.WHATSAPP : MessageOrigem.SITE,
       direcao: MessageDirecao.OUTBOUND,
       status_envio: MessageStatusEnvio.ENVIADO,
       ...(payload.user_id ? { user_id: payload.user_id } : {}),
@@ -839,15 +854,56 @@ async function sendMessageRoute(request: { body: unknown }, reply: { status: (st
   });
 
   io.emit("message_sent", message);
-  const whatsappSettings = await getWhatsAppSettings();
+  const deliveries: {
+    whatsapp?: Awaited<ReturnType<typeof sendWhatsAppMessage>>;
+    email?: Awaited<ReturnType<typeof sendLeadReplyEmail>>;
+  } = {};
 
-  const delivery = await sendWhatsAppMessage({
-    telefone: lead.telefone,
-    conteudo: payload.conteudo,
-    settings: whatsappSettings,
-  });
+  if (shouldSendWhatsApp && lead.telefone) {
+    const whatsappSettings = await getWhatsAppSettings();
+    deliveries.whatsapp = await sendWhatsAppMessage({
+      telefone: lead.telefone,
+      conteudo: payload.conteudo,
+      settings: whatsappSettings,
+      logger: app.log,
+    });
+  }
 
-  if (!delivery.ok && !delivery.skipped) {
+  if (shouldSendEmail) {
+    const mailSettings = await getMailSettings();
+
+    try {
+      deliveries.email = await sendLeadReplyEmail(
+        {
+          lead,
+          conteudo: payload.conteudo,
+          userName: message.user?.nome ?? null,
+        },
+        mailSettings,
+      );
+    } catch (error) {
+      app.log.error(
+        {
+          error,
+          leadId: lead.id,
+          email: lead.email,
+        },
+        "Erro ao enviar resposta por e-mail",
+      );
+      deliveries.email = {
+        ok: false,
+        skipped: false,
+        reason: "Falha ao enviar resposta por e-mail.",
+      };
+    }
+  }
+
+  const whatsappFailed =
+    deliveries.whatsapp && !deliveries.whatsapp.ok && !deliveries.whatsapp.skipped;
+  const emailFailed =
+    deliveries.email && !deliveries.email.ok && !deliveries.email.skipped;
+
+  if (whatsappFailed || emailFailed) {
     const failedMessage = await prisma.message.update({
       where: {
         id: message.id,
@@ -863,8 +919,8 @@ async function sendMessageRoute(request: { body: unknown }, reply: { status: (st
 
     io.emit("message_updated", failedMessage);
     await createNotification({
-      titulo: "Falha no envio WhatsApp",
-      conteudo: `A mensagem para ${lead.nome} não foi entregue pelo gateway.`,
+      titulo: "Falha no envio de resposta",
+      conteudo: `A resposta para ${lead.nome} foi registrada, mas falhou em ${whatsappFailed ? "WhatsApp" : ""}${whatsappFailed && emailFailed ? " e " : ""}${emailFailed ? "e-mail" : ""}.`,
       tipo: NotificationTipo.SEND_ERROR,
       lead_id: lead.id,
       ...(payload.user_id
@@ -876,14 +932,20 @@ async function sendMessageRoute(request: { body: unknown }, reply: { status: (st
 
     return {
       ok: false,
-      delivery,
+      delivery: deliveries.whatsapp ?? deliveries.email,
+      deliveries,
       message: failedMessage,
     };
   }
 
   return {
     ok: true,
-    delivery,
+    delivery: deliveries.whatsapp ?? deliveries.email ?? {
+      ok: true,
+      skipped: true,
+      reason: "Nenhum canal externo selecionado.",
+    },
+    deliveries,
     message,
   };
 }
@@ -999,6 +1061,7 @@ async function sendWelcomeAutoResponse(lead: { id: string; telefone: string | nu
     telefone: lead.telefone,
     conteudo: autoResponse.conteudo_texto,
     settings: whatsappSettings,
+    logger: app.log,
   });
 
   if (!delivery.ok && !delivery.skipped) {

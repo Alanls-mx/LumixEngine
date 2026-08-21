@@ -9,6 +9,15 @@ type LeadEmailPayload = {
   origem?: string | null | undefined;
 };
 
+type LeadReplyEmailPayload = {
+  lead: {
+    nome: string;
+    email?: string | null;
+  };
+  conteudo: string;
+  userName?: string | null;
+};
+
 export type MailSettings = {
   SMTP_HOST?: string | null | undefined;
   SMTP_PORT?: string | null | undefined;
@@ -304,6 +313,53 @@ export async function sendTestEmail(to: string, settings: MailSettings = {}) {
   return {
     ok: true,
     message: "E-mail de teste enviado.",
+  };
+}
+
+export async function sendLeadReplyEmail(
+  payload: LeadReplyEmailPayload,
+  settings: MailSettings = {},
+) {
+  const mail = createTransporter(settings);
+
+  if (!payload.lead.email) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: "Lead sem e-mail para resposta.",
+    };
+  }
+
+  if (!mail) {
+    return {
+      ok: false,
+      skipped: true,
+      reason: "Configuração SMTP incompleta.",
+    };
+  }
+
+  await mail.transporter.sendMail({
+    from: mail.config.smtpFrom,
+    to: payload.lead.email,
+    subject: "Resposta da LumixEngine",
+    html: emailShell({
+      eyebrow: "Atendimento LumixEngine",
+      title: "Nova resposta da nossa equipe",
+      subtitle:
+        "Recebemos seu contato e nossa equipe respondeu com o próximo passo do atendimento.",
+      children: `
+        <p style="margin:0;color:#e5e7eb;font-size:16px;line-height:1.75;">Olá${payload.lead.nome ? `, ${escapeHtml(payload.lead.nome)}` : ""}.</p>
+        <div style="margin-top:18px;padding:18px;border-radius:14px;background:#020617;border:1px solid #1e293b;color:#e2e8f0;font-size:14px;line-height:1.75;">
+          ${formatMultilineHtml(payload.conteudo)}
+        </div>
+        <div style="margin-top:18px;color:#94a3b8;font-size:13px;line-height:1.7;">${payload.userName ? `Respondido por ${escapeHtml(payload.userName)}.` : "Equipe LumixEngine."}</div>
+      `,
+    }),
+  });
+
+  return {
+    ok: true,
+    skipped: false,
   };
 }
 

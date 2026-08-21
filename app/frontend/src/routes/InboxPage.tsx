@@ -6,6 +6,7 @@ import {
   CheckCheck,
   CircleAlert,
   Clock3,
+  Mail,
   MessageCircle,
   Send,
   Smile,
@@ -29,6 +30,7 @@ const quickReplies = [
 ]
 
 const emojiOptions = ['🙂', '👍', '✅', '🚀', '🙏']
+type ResponseChannel = 'WHATSAPP' | 'EMAIL'
 
 export function InboxPage() {
   useLeadRealtime()
@@ -36,6 +38,9 @@ export function InboxPage() {
   const queryClient = useQueryClient()
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [messageText, setMessageText] = useState('')
+  const [responseChannels, setResponseChannels] = useState<ResponseChannel[]>([
+    'WHATSAPP',
+  ])
 
   const leadsQuery = useQuery({
     queryKey: queryKeys.leads,
@@ -94,10 +99,30 @@ export function InboxPage() {
             : lead,
         ),
       )
-      toast.success('Mensagem registrada', {
+      const failedChannels = [
+        response.deliveries?.whatsapp &&
+        !response.deliveries.whatsapp.ok &&
+        !response.deliveries.whatsapp.skipped
+          ? 'WhatsApp'
+          : null,
+        response.deliveries?.email &&
+        !response.deliveries.email.ok &&
+        !response.deliveries.email.skipped
+          ? 'e-mail'
+          : null,
+      ].filter(Boolean)
+
+      if (failedChannels.length > 0) {
+        toast.error('Resposta registrada com falha de entrega', {
+          description: `Falha em ${failedChannels.join(' e ')}.`,
+        })
+        return
+      }
+
+      toast.success('Resposta registrada', {
         description: response.delivery.skipped
-          ? 'Gateway WhatsApp não configurado; envio externo ignorado.'
-          : 'Mensagem enviada para o cliente.',
+          ? 'Canal externo não configurado; envio externo ignorado.'
+          : 'Envio solicitado ao gateway configurado.',
       })
     },
     onError: () => {
@@ -144,6 +169,18 @@ export function InboxPage() {
             user_id: selectedLead.assigned_to_id,
           }
         : {}),
+      channels: responseChannels,
+    })
+  }
+
+  const toggleResponseChannel = (channel: ResponseChannel) => {
+    setResponseChannels((currentChannels) => {
+      if (currentChannels.includes(channel)) {
+        const nextChannels = currentChannels.filter((item) => item !== channel)
+        return nextChannels.length > 0 ? nextChannels : currentChannels
+      }
+
+      return [...currentChannels, channel]
     })
   }
 
@@ -275,6 +312,30 @@ export function InboxPage() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-600">
+                  <span className="text-slate-400">Enviar por</span>
+                  <label className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-1.5">
+                    <input
+                      type="checkbox"
+                      className="size-3.5 accent-emerald-500"
+                      checked={responseChannels.includes('WHATSAPP')}
+                      onChange={() => toggleResponseChannel('WHATSAPP')}
+                    />
+                    <MessageCircle className="size-3.5" aria-hidden="true" />
+                    WhatsApp
+                  </label>
+                  <label className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-1.5">
+                    <input
+                      type="checkbox"
+                      className="size-3.5 accent-emerald-500"
+                      checked={responseChannels.includes('EMAIL')}
+                      onChange={() => toggleResponseChannel('EMAIL')}
+                    />
+                    <Mail className="size-3.5" aria-hidden="true" />
+                    E-mail
+                  </label>
                 </div>
 
                 <div className="flex items-end gap-2">

@@ -86,16 +86,24 @@ export type SendMessagePayload = {
   lead_id: string
   conteudo: string
   user_id?: string
+  channels?: Array<'WHATSAPP' | 'EMAIL'>
+}
+
+export type DeliveryStatus = {
+  ok: boolean
+  skipped: boolean
+  status?: number
+  response?: unknown
+  reason?: string
+  errorType?: string
 }
 
 export type SendMessageResponse = {
   ok: boolean
-  delivery: {
-    ok: boolean
-    skipped: boolean
-    status?: number
-    response?: unknown
-    reason?: string
+  delivery: DeliveryStatus
+  deliveries?: {
+    whatsapp?: DeliveryStatus
+    email?: DeliveryStatus
   }
   message: Message & {
     lead?: Lead

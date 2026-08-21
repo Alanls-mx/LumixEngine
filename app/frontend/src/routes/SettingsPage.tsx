@@ -195,7 +195,7 @@ export function SettingsPage() {
           <SettingsCard
             icon={MessageCircle}
             title="WhatsApp Gateway"
-            description="Compatível com endpoints HTTP da Evolution API ou Z-API."
+            description="Evolution API 2.1.1 auto-hospedada. Informe o endpoint sendText da instância e a API Key global."
           >
             <div className="grid gap-4">
               <Field
@@ -204,7 +204,7 @@ export function SettingsPage() {
                 onChange={(value) =>
                   setFormState((state) => ({ ...state, WHATSAPP_API_URL: value }))
                 }
-                placeholder="https://api.exemplo.com/message/sendText"
+                placeholder="http://IP_DA_VPS:8080/message/sendText/{instance_name}"
               />
               <Field
                 label="Token / API Key"
@@ -213,7 +213,7 @@ export function SettingsPage() {
                 onChange={(value) =>
                   setFormState((state) => ({ ...state, WHATSAPP_API_TOKEN: value }))
                 }
-                placeholder="Token do gateway"
+                placeholder="Chave global da Evolution API"
               />
             </div>
           </SettingsCard>
