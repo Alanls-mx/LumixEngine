@@ -159,6 +159,7 @@ function DeferredSection({ children, minHeight }: { children: ReactNode; minHeig
       return;
     }
 
+    const rootMargin = window.matchMedia('(max-width: 767px)').matches ? '96px 0px' : '360px 0px';
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -166,7 +167,7 @@ function DeferredSection({ children, minHeight }: { children: ReactNode; minHeig
           observer.disconnect();
         }
       },
-      { rootMargin: '720px 0px' },
+      { rootMargin },
     );
 
     observer.observe(element);
