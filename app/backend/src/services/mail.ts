@@ -18,12 +18,30 @@ export type MailSettings = {
   INTERNAL_LEAD_NOTIFICATION_EMAIL?: string | null | undefined;
 };
 
+function normalizeSender(
+  from: string | null | undefined,
+  user: string | null | undefined,
+) {
+  if (!from) {
+    return user ?? undefined;
+  }
+
+  if (from.includes("@")) {
+    return from;
+  }
+
+  return user ? `${from} <${user}>` : from;
+}
+
 function getMailConfig(settings: MailSettings = {}) {
   const smtpHost = settings.SMTP_HOST ?? process.env.SMTP_HOST;
   const smtpPort = Number(settings.SMTP_PORT ?? process.env.SMTP_PORT ?? 587);
   const smtpUser = settings.SMTP_USER ?? process.env.SMTP_USER;
   const smtpPass = settings.SMTP_PASS ?? process.env.SMTP_PASS;
-  const smtpFrom = settings.SMTP_FROM ?? process.env.SMTP_FROM ?? smtpUser;
+  const smtpFrom = normalizeSender(
+    settings.SMTP_FROM ?? process.env.SMTP_FROM,
+    smtpUser,
+  );
   const internalEmail =
     settings.INTERNAL_LEAD_NOTIFICATION_EMAIL ??
     process.env.INTERNAL_LEAD_NOTIFICATION_EMAIL ??
