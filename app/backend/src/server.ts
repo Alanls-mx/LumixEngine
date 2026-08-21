@@ -631,7 +631,13 @@ app.post("/api/settings/email/verify", async (_request, reply) => {
   const mailSettings = await getMailSettings();
 
   try {
-    return await verifyMailSettings(mailSettings);
+    const result = await verifyMailSettings(mailSettings);
+
+    if (!result.ok) {
+      return reply.status(400).send(result);
+    }
+
+    return result;
   } catch (error) {
     app.log.error({ error }, "Erro ao verificar SMTP");
 
