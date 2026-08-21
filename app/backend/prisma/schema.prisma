@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 enum LeadStatus {
@@ -72,7 +72,7 @@ model Lead {
   email           String?
   telefone        String?
   status          LeadStatus @default(NOVO_LEAD)
-  valor_estimado  Decimal?
+  valor_estimado  Decimal?   @db.Decimal(12, 2)
   data_criacao    DateTime   @default(now())
   assigned_to_id  String?
   last_interaction_at DateTime @default(now())

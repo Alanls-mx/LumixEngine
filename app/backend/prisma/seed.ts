@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 import {
   LeadStatus,
@@ -11,13 +11,16 @@ import {
   UserRole,
 } from "../generated/prisma/client.js";
 
-const sqliteUrl =
-  process.env.DATABASE_URL === "file:./dev.db"
-    ? "file:./prisma/dev.db"
-    : (process.env.DATABASE_URL ?? "file:./prisma/dev.db");
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required.");
+}
 
 const prisma = new PrismaClient({
-  adapter: new PrismaBetterSqlite3({ url: sqliteUrl }),
+  adapter: new PrismaPg({
+    connectionString: databaseUrl,
+  }),
 });
 
 const today = new Date();
