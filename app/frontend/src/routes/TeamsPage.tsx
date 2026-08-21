@@ -74,22 +74,19 @@ export function TeamsPage() {
   })
 
   const updateUser = useMutation({
-    mutationFn: ({ id, team_id }: { id: string; team_id: string | null }) =>
-      usersApi.update(id, { team_id }),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string
+      payload: { team_id?: string | null; role?: UserRole; ativo?: boolean }
+    }) => usersApi.update(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: usersKey })
       queryClient.invalidateQueries({ queryKey: teamsKey })
-      toast.success('Equipe do atendente atualizada')
+      toast.success('Atendente atualizado')
     },
     onError: () => toast.error('Não foi possível atualizar o atendente'),
-  })
-
-  const deactivateUser = useMutation({
-    mutationFn: usersApi.deactivate,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: usersKey })
-      toast.success('Atendente desativado')
-    },
   })
 
   const isAdmin = auth.user?.role === 'ADMIN'
@@ -245,9 +242,14 @@ export function TeamsPage() {
                 teams={teamsQuery.data ?? []}
                 canEdit={isAdmin}
                 onAssign={(userId, teamId) =>
-                  updateUser.mutate({ id: userId, team_id: teamId })
+                  updateUser.mutate({ id: userId, payload: { team_id: teamId } })
                 }
-                onDeactivate={(userId) => deactivateUser.mutate(userId)}
+                onRoleChange={(userId, role) =>
+                  updateUser.mutate({ id: userId, payload: { role } })
+                }
+                onStatusChange={(userId, ativo) =>
+                  updateUser.mutate({ id: userId, payload: { ativo } })
+                }
               />
             </section>
           ))}
@@ -262,9 +264,14 @@ export function TeamsPage() {
               teams={teamsQuery.data ?? []}
               canEdit={isAdmin}
               onAssign={(userId, teamId) =>
-                updateUser.mutate({ id: userId, team_id: teamId })
+                updateUser.mutate({ id: userId, payload: { team_id: teamId } })
               }
-              onDeactivate={(userId) => deactivateUser.mutate(userId)}
+              onRoleChange={(userId, role) =>
+                updateUser.mutate({ id: userId, payload: { role } })
+              }
+              onStatusChange={(userId, ativo) =>
+                updateUser.mutate({ id: userId, payload: { ativo } })
+              }
             />
           </section>
         </div>
@@ -278,13 +285,15 @@ function UsersTable({
   teams,
   canEdit,
   onAssign,
-  onDeactivate,
+  onRoleChange,
+  onStatusChange,
 }: {
   users: Awaited<ReturnType<typeof usersApi.list>>
   teams: Team[]
   canEdit: boolean
   onAssign: (userId: string, teamId: string | null) => void
-  onDeactivate: (userId: string) => void
+  onRoleChange: (userId: string, role: UserRole) => void
+  onStatusChange: (userId: string, ativo: boolean) => void
 }) {
   if (users.length === 0) {
     return <p className="text-sm text-slate-500">Nenhum atendente nesta lista.</p>
@@ -309,7 +318,19 @@ function UsersTable({
                 <p className="font-semibold text-slate-950">{user.nome}</p>
                 <p className="text-xs text-slate-500">{user.email}</p>
               </td>
-              <td className="py-3">{user.role}</td>
+              <td className="py-3">
+                <select
+                  value={user.role}
+                  disabled={!canEdit}
+                  onChange={(event) =>
+                    onRoleChange(user.id, event.target.value as UserRole)
+                  }
+                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                >
+                  <option value="ATENDENTE">Atendente</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </td>
               <td className="py-3">
                 <TeamSelect
                   value={user.team_id ?? ''}
@@ -328,10 +349,10 @@ function UsersTable({
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!canEdit || !user.ativo}
-                  onClick={() => onDeactivate(user.id)}
+                  disabled={!canEdit}
+                  onClick={() => onStatusChange(user.id, !user.ativo)}
                 >
-                  Desativar
+                  {user.ativo ? 'Desativar' : 'Ativar'}
                 </Button>
               </td>
             </tr>
