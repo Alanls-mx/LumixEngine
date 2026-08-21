@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { settingsApi } from '@/lib/api'
+import { ApiError, settingsApi } from '@/lib/api'
 import type { SettingsPayload } from '@/types/lead'
 
 const settingsKey = ['settings'] as const
@@ -20,6 +20,20 @@ const defaultFormState = {
   INTERNAL_LEAD_NOTIFICATION_EMAIL: '',
   WHATSAPP_API_URL: '',
   WHATSAPP_API_TOKEN: '',
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (
+    error instanceof ApiError &&
+    error.details &&
+    typeof error.details === 'object' &&
+    'message' in error.details &&
+    typeof error.details.message === 'string'
+  ) {
+    return error.details.message
+  }
+
+  return fallback
 }
 
 export function SettingsPage() {
@@ -56,8 +70,8 @@ export function SettingsPage() {
       queryClient.setQueryData(settingsKey, data)
       toast.success('Configurações salvas')
     },
-    onError: () => {
-      toast.error('Não foi possível salvar as configurações')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Não foi possível salvar as configurações'))
     },
   })
 
@@ -66,8 +80,8 @@ export function SettingsPage() {
     onSuccess: (response) => {
       toast.success(response.message)
     },
-    onError: () => {
-      toast.error('Falha ao verificar SMTP')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Falha ao verificar SMTP'))
     },
   })
 
@@ -76,8 +90,8 @@ export function SettingsPage() {
     onSuccess: (response) => {
       toast.success(response.message)
     },
-    onError: () => {
-      toast.error('Falha ao enviar e-mail de teste')
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Falha ao enviar e-mail de teste'))
     },
   })
 

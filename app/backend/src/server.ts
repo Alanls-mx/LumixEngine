@@ -408,6 +408,38 @@ async function createNotification(
   return notification;
 }
 
+function getSmtpErrorMessage(error: unknown) {
+  if (!isRecord(error)) {
+    return "Falha ao conectar ao SMTP.";
+  }
+
+  const code = typeof error.code === "string" ? error.code : undefined;
+  const command =
+    typeof error.command === "string" ? error.command : undefined;
+  const hostname =
+    typeof error.hostname === "string" ? error.hostname : undefined;
+  const response =
+    typeof error.response === "string" ? error.response : undefined;
+
+  if (code === "EDNS" || code === "ENOTFOUND" || code === "EAI_AGAIN") {
+    return `Host SMTP nao encontrado${hostname ? `: ${hostname}` : ""}. Confira o campo SMTP Host ou crie o registro DNS correspondente.`;
+  }
+
+  if (code === "EAUTH") {
+    return "Falha de autenticacao SMTP. Confira usuario, senha/app password e permissoes da conta.";
+  }
+
+  if (code === "ECONNECTION" || code === "ETIMEDOUT" || code === "ESOCKET") {
+    return "Nao foi possivel conectar ao servidor SMTP. Confira host, porta e SSL/TLS.";
+  }
+
+  if (response) {
+    return `Servidor SMTP recusou a operacao${command ? ` (${command})` : ""}: ${response}`;
+  }
+
+  return "Falha ao conectar ao SMTP. Confira host, porta, usuario, senha e remetente.";
+}
+
 function pushDetail(lines: string[], label: string, value: unknown) {
   if (typeof value === "string" && value.trim().length > 0) {
     lines.push(`${label}: ${value.trim()}`);
@@ -590,7 +622,7 @@ app.post("/api/settings/email/test", async (request, reply) => {
 
     return reply.status(400).send({
       ok: false,
-      message: "Falha ao enviar e-mail de teste.",
+      message: getSmtpErrorMessage(error),
     });
   }
 });
@@ -605,7 +637,7 @@ app.post("/api/settings/email/verify", async (_request, reply) => {
 
     return reply.status(400).send({
       ok: false,
-      message: "Falha ao verificar SMTP.",
+      message: getSmtpErrorMessage(error),
     });
   }
 });

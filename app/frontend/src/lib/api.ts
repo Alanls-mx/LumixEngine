@@ -17,13 +17,15 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
 }
 
 async function apiRequest<T>(path: string, options: RequestOptions = {}) {
+  const hasBody = options.body !== undefined
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...options.headers,
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: hasBody ? JSON.stringify(options.body) : undefined,
   })
 
   if (!response.ok) {
