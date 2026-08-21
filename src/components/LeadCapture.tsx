@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, MessageCircle, Send } from 'lucide-react';
 import { whatsappLinks } from '../constants/content';
 import { formatPhone, isTextFilled, isValidEmail, isValidPhone, toBrazilianE164 } from '../lib/leadForm';
-import { getLeadWebhookErrorMessage, submitLeadWebhook } from '../services/leadWebhook';
+import { getLeadWebhookErrorMessage, getSiteLeadContext, submitLeadWebhook } from '../services/leadWebhook';
+import { trackEvent } from '../lib/tracking';
 
 type QuickContactForm = {
   fullName: string;
@@ -71,6 +72,14 @@ export function LeadCapture() {
         telefone: toBrazilianE164(formState.phone),
         conteudo: `[Contato Rápido] ${message}`,
         origem: 'SITE',
+        ...getSiteLeadContext('contato_rapido', {
+          form_name: 'Contato rápido',
+          message_length: message.length,
+        }),
+      });
+
+      trackEvent('quick_contact_submit', {
+        message_length: message.length,
       });
 
       setIsSubmitted(true);

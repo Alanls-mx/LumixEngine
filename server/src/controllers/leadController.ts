@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { forwardLeadToLumixApp } from '../services/lumixAppWebhook.js';
 import { saveLead } from '../services/leadStore.js';
 
 type LeadCaptureBody = {
@@ -131,6 +132,26 @@ export async function captureLead(request: Request<unknown, unknown, LeadCapture
     source,
     userAgent: request.get('user-agent') ?? null,
     ip: request.ip,
+  });
+
+  void forwardLeadToLumixApp({
+    nome: 'Lead capturado no site',
+    email,
+    telefone: `+${phone}`,
+    conteudo: `[Captura legada] Lead enviado pelo endpoint /api/leads. Origem: ${source}.`,
+    origem: 'SITE',
+    form_id: source,
+    metadata: {
+      server_received_at: new Date().toISOString(),
+      server_user_agent: request.get('user-agent') ?? null,
+      server_ip: request.ip ?? null,
+      server_origin: request.get('origin') ?? null,
+      server_referer: request.get('referer') ?? null,
+      forwarded_host: request.get('host') ?? null,
+      legacy_lead_id: lead.id,
+    },
+  }).catch(() => {
+    // O armazenamento local continua servindo como fallback caso o App esteja indisponível.
   });
 
   return response.status(200).json({

@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ClipboardList, MessageCircle, Send, X } from 'lucide-react';
 import { whatsappLinks } from '../constants/content';
 import { formatPhone, isTextFilled, isValidEmail, isValidPhone, toBrazilianE164 } from '../lib/leadForm';
-import { getLeadWebhookErrorMessage, submitLeadWebhook } from '../services/leadWebhook';
+import { getLeadWebhookErrorMessage, getSiteLeadContext, submitLeadWebhook } from '../services/leadWebhook';
 import { trackEvent } from '../lib/tracking';
 
 type DiagnosticModalProps = {
@@ -177,6 +177,12 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
         valor_estimado: estimatedValue,
         conteudo: `[${selectedSolution}] ${projectDescription}`,
         origem: 'SITE',
+        ...getSiteLeadContext('orcamento_diagnostico', {
+          form_name: 'Solicitar orçamento',
+          selected_solution: selectedSolution,
+          investment_option: formState.investment || null,
+          description_length: projectDescription.length,
+        }),
       });
 
       trackEvent('budget_form_submit', {

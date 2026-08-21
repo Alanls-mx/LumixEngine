@@ -1,0 +1,170 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum LeadStatus {
+  NOVO_LEAD
+  NEGOCIACAO
+  PROPOSTA
+  GANHO
+  PERDIDO
+}
+
+enum MessageOrigem {
+  SITE
+  WHATSAPP
+}
+
+enum TaskStatus {
+  PENDENTE
+  CONCLUIDA
+}
+
+enum UserRole {
+  ADMIN
+  ATENDENTE
+}
+
+enum MessageDirecao {
+  INBOUND
+  OUTBOUND
+}
+
+enum MessageStatusEnvio {
+  ENVIADO
+  ENTREGUE
+  LIDO
+  ERRO
+}
+
+enum NotificationTipo {
+  NEW_LEAD
+  NEW_MESSAGE
+  LEAD_ASSIGNED
+  SEND_ERROR
+  SYSTEM
+}
+
+model User {
+  id              String   @id @default(cuid())
+  nome            String
+  email           String   @unique
+  senha_hash      String
+  role            UserRole @default(ATENDENTE)
+  data_criacao    DateTime @default(now())
+
+  leads_atribuidos Lead[]
+  messages_enviadas Message[]
+  notifications Notification[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model Lead {
+  id              String     @id @default(cuid())
+  nome            String
+  email           String?
+  telefone        String?
+  status          LeadStatus @default(NOVO_LEAD)
+  valor_estimado  Decimal?
+  data_criacao    DateTime   @default(now())
+  assigned_to_id  String?
+  last_interaction_at DateTime @default(now())
+
+  assigned_to User? @relation(fields: [assigned_to_id], references: [id], onDelete: SetNull)
+  messages Message[]
+  tasks    Task[]
+  notifications Notification[]
+
+  @@index([status])
+  @@index([email])
+  @@index([assigned_to_id])
+  @@index([last_interaction_at])
+  @@map("leads")
+}
+
+model Message {
+  id            String              @id @default(cuid())
+  lead_id       String
+  conteudo      String
+  origem        MessageOrigem
+  direcao       MessageDirecao      @default(INBOUND)
+  user_id       String?
+  status_envio  MessageStatusEnvio  @default(ENTREGUE)
+  data_envio    DateTime            @default(now())
+
+  lead Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([lead_id])
+  @@index([origem])
+  @@index([direcao])
+  @@index([user_id])
+  @@index([status_envio])
+  @@map("messages")
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  lead_id      String
+  descricao    String
+  status       TaskStatus @default(PENDENTE)
+  data_limite  DateTime?
+
+  lead Lead @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+
+  @@index([lead_id])
+  @@index([status])
+  @@map("tasks")
+}
+
+model AutoResponse {
+  id              String   @id @default(cuid())
+  gatilho         String   @unique
+  conteudo_texto  String
+  ativo           Boolean  @default(true)
+  data_criacao    DateTime @default(now())
+  data_atualizacao DateTime @updatedAt
+
+  @@index([ativo])
+  @@map("auto_responses")
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  titulo        String
+  conteudo      String
+  tipo          NotificationTipo @default(SYSTEM)
+  lead_id       String?
+  user_id       String?
+  lida          Boolean          @default(false)
+  data_criacao  DateTime         @default(now())
+
+  lead Lead? @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [user_id], references: [id], onDelete: SetNull)
+
+  @@index([lida])
+  @@index([tipo])
+  @@index([lead_id])
+  @@index([user_id])
+  @@index([data_criacao])
+  @@map("notifications")
+}
+
+model AppSetting {
+  id                String   @id @default(cuid())
+  chave             String   @unique
+  valor             String?
+  categoria         String
+  secreto           Boolean  @default(false)
+  data_atualizacao  DateTime @updatedAt
+
+  @@index([categoria])
+  @@map("app_settings")
+}

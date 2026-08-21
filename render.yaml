@@ -28,6 +28,8 @@ services:
         value: "5512981157296"
       - key: LEAD_WEBHOOK_URL
         sync: false
+      - key: LUMIX_APP_WEBHOOK_URL
+        value: https://lumixengine-app-api.onrender.com/api/webhooks/lead
 
   - type: web
     name: lumixengine-frontend
@@ -90,3 +92,86 @@ services:
       - path: /*
         name: Cross-Origin-Opener-Policy
         value: same-origin
+
+  - type: web
+    name: lumixengine-app-api
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: cd app/backend && npm ci && npm run render:build
+    startCommand: cd app/backend && npm run render:start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    disk:
+      name: lumixengine-app-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
+      - key: HOST
+        value: 0.0.0.0
+      - key: FRONTEND_URL
+        value: https://app.lumixengine.com
+      - key: CORS_ORIGINS
+        value: https://app.lumixengine.com,https://lumixengine.com,https://www.lumixengine.com
+      - key: DATABASE_URL
+        value: file:/var/data/lumixengine-app.db
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: INTERNAL_LEAD_NOTIFICATION_EMAIL
+        sync: false
+      - key: WHATSAPP_API_URL
+        sync: false
+      - key: WHATSAPP_API_TOKEN
+        sync: false
+
+  - type: web
+    name: lumixengine-app-frontend
+    runtime: static
+    buildCommand: cd app/frontend && npm ci && npm run build
+    staticPublishPath: app/frontend/dist
+    autoDeployTrigger: commit
+    domains:
+      - app.lumixengine.com
+    envVars:
+      - key: VITE_API_URL
+        value: https://lumixengine-app-api.onrender.com/api
+      - key: VITE_SOCKET_URL
+        value: https://lumixengine-app-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: Content-Security-Policy
+        value: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://lumixengine-app-api.onrender.com wss://lumixengine-app-api.onrender.com; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=()
