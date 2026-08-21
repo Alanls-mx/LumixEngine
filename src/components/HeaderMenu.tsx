@@ -42,9 +42,9 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
           aria-label="LumixEngine início"
         >
           <img
-            src="/assets/lumix-logo-header.webp"
+            src="/assets/lumix-logo-header-cropped.webp"
             alt="LumixEngine"
-            className="h-9 w-auto max-w-[172px] flex-shrink-0 object-contain min-[360px]:h-10 min-[360px]:max-w-[210px] md:h-12 md:max-w-[260px]"
+            className="h-11 w-auto max-w-[210px] flex-shrink-0 object-contain min-[360px]:h-12 min-[360px]:max-w-[240px] md:h-14 md:max-w-[300px]"
             width={412}
             height={86}
             loading="eager"
