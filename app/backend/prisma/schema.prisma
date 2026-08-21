@@ -54,16 +54,38 @@ model User {
   id              String   @id @default(cuid())
   nome            String
   email           String   @unique
-  senha_hash      String
+  senha_hash      String?
+  google_id       String?  @unique
+  avatar_url      String?
   role            UserRole @default(ATENDENTE)
+  ativo           Boolean  @default(true)
+  team_id         String?
+  ultimo_login    DateTime?
   data_criacao    DateTime @default(now())
 
+  team Team? @relation(fields: [team_id], references: [id], onDelete: SetNull)
   leads_atribuidos Lead[]
   messages_enviadas Message[]
   notifications Notification[]
 
   @@index([role])
+  @@index([ativo])
+  @@index([team_id])
   @@map("users")
+}
+
+model Team {
+  id             String   @id @default(cuid())
+  nome           String
+  descricao      String?
+  ativo          Boolean  @default(true)
+  data_criacao   DateTime @default(now())
+  data_atualizacao DateTime @updatedAt
+
+  users User[]
+
+  @@index([ativo])
+  @@map("teams")
 }
 
 model Lead {
@@ -96,6 +118,8 @@ model Message {
   origem        MessageOrigem
   direcao       MessageDirecao      @default(INBOUND)
   user_id       String?
+  client_request_id String?         @unique
+  provider_message_id String?       @unique
   status_envio  MessageStatusEnvio  @default(ENTREGUE)
   data_envio    DateTime            @default(now())
 
@@ -107,6 +131,7 @@ model Message {
   @@index([direcao])
   @@index([user_id])
   @@index([status_envio])
+  @@index([provider_message_id])
   @@map("messages")
 }
 
@@ -134,6 +159,21 @@ model AutoResponse {
 
   @@index([ativo])
   @@map("auto_responses")
+}
+
+model MessageTemplate {
+  id              String   @id @default(cuid())
+  titulo          String
+  categoria       String   @default("geral")
+  conteudo_texto  String
+  ativo           Boolean  @default(true)
+  uso_ia          Boolean  @default(false)
+  data_criacao    DateTime @default(now())
+  data_atualizacao DateTime @updatedAt
+
+  @@index([categoria])
+  @@index([ativo])
+  @@map("message_templates")
 }
 
 model Notification {

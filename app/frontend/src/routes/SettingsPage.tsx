@@ -1,13 +1,25 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Mail, MessageCircle, Save, Send, ShieldCheck, Zap } from 'lucide-react'
+import {
+  FileText,
+  Globe,
+  Mail,
+  MessageCircle,
+  Plus,
+  Save,
+  Send,
+  ShieldCheck,
+  Trash2,
+  Zap,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ApiError, settingsApi } from '@/lib/api'
-import type { SettingsPayload } from '@/types/lead'
+import { ApiError, messageTemplatesApi, settingsApi } from '@/lib/api'
+import { useAuth } from '@/lib/AuthProvider'
+import type { MessageTemplate, SettingsPayload } from '@/types/lead'
 
 const settingsKey = ['settings'] as const
 
@@ -20,6 +32,7 @@ const defaultFormState = {
   INTERNAL_LEAD_NOTIFICATION_EMAIL: '',
   WHATSAPP_API_URL: '',
   WHATSAPP_API_TOKEN: '',
+  GOOGLE_CLIENT_ID: '',
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {
@@ -195,7 +208,7 @@ export function SettingsPage() {
           <SettingsCard
             icon={MessageCircle}
             title="WhatsApp Gateway"
-            description="Evolution API 2.1.1 auto-hospedada. Informe o endpoint sendText da instância e a API Key global."
+            description="Evolution API auto-hospedada. Informe o endpoint sendText da instância e a API Key global."
           >
             <div className="grid gap-4">
               <Field
@@ -216,6 +229,21 @@ export function SettingsPage() {
                 placeholder="Chave global da Evolution API"
               />
             </div>
+          </SettingsCard>
+
+          <SettingsCard
+            icon={Globe}
+            title="Login Google"
+            description="Habilita autenticação por Google Identity Services no painel interno."
+          >
+            <Field
+              label="Google Client ID"
+              value={formState.GOOGLE_CLIENT_ID ?? ''}
+              onChange={(value) =>
+                setFormState((state) => ({ ...state, GOOGLE_CLIENT_ID: value }))
+              }
+              placeholder="000000000000-xxxx.apps.googleusercontent.com"
+            />
           </SettingsCard>
         </div>
 
@@ -269,7 +297,204 @@ export function SettingsPage() {
           </SettingsCard>
         </aside>
       </form>
+
+      <MessageTemplatesPanel />
     </section>
+  )
+}
+
+const emptyTemplateForm = {
+  titulo: '',
+  categoria: 'geral',
+  conteudo_texto: '',
+  ativo: true,
+  uso_ia: false,
+}
+
+function MessageTemplatesPanel() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const [form, setForm] = useState(emptyTemplateForm)
+  const templatesKey = ['message-templates'] as const
+
+  const templatesQuery = useQuery({
+    queryKey: templatesKey,
+    queryFn: messageTemplatesApi.list,
+  })
+
+  const createTemplate = useMutation({
+    mutationFn: messageTemplatesApi.create,
+    onSuccess: () => {
+      setForm(emptyTemplateForm)
+      queryClient.invalidateQueries({ queryKey: templatesKey })
+      toast.success('Template criado')
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Não foi possível criar o template'))
+    },
+  })
+
+  const toggleTemplate = useMutation({
+    mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) =>
+      messageTemplatesApi.update(id, { ativo }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: templatesKey })
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Não foi possível atualizar o template'))
+    },
+  })
+
+  const deleteTemplate = useMutation({
+    mutationFn: (template: MessageTemplate) =>
+      messageTemplatesApi.update(template.id, { ativo: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: templatesKey })
+      toast.success('Template desativado')
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Não foi possível desativar o template'))
+    },
+  })
+
+  const canManageTemplates = user?.role === 'ADMIN'
+
+  return (
+    <SettingsCard
+      icon={FileText}
+      title="Templates e respostas automáticas"
+      description="Mensagens reutilizáveis para o Inbox e base para sugestões assistidas por IA."
+    >
+      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+        <form
+          className="space-y-4 rounded-md border border-slate-200 bg-slate-50 p-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+
+            if (!form.titulo.trim() || !form.conteudo_texto.trim()) {
+              toast.error('Informe título e conteúdo')
+              return
+            }
+
+            createTemplate.mutate({
+              titulo: form.titulo.trim(),
+              categoria: form.categoria.trim() || 'geral',
+              conteudo_texto: form.conteudo_texto.trim(),
+              ativo: form.ativo,
+              uso_ia: form.uso_ia,
+            })
+          }}
+        >
+          <Field
+            label="Título"
+            value={form.titulo}
+            onChange={(value) => setForm((state) => ({ ...state, titulo: value }))}
+            placeholder="Follow-up comercial"
+          />
+          <Field
+            label="Categoria"
+            value={form.categoria}
+            onChange={(value) => setForm((state) => ({ ...state, categoria: value }))}
+            placeholder="follow_up"
+          />
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-slate-700">Conteúdo</span>
+            <textarea
+              value={form.conteudo_texto}
+              onChange={(event) =>
+                setForm((state) => ({ ...state, conteudo_texto: event.target.value }))
+              }
+              placeholder="Olá, {nome}! Podemos avançar com sua proposta?"
+              className="min-h-28 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={form.uso_ia}
+              onChange={(event) =>
+                setForm((state) => ({ ...state, uso_ia: event.target.checked }))
+              }
+              className="size-4 rounded border-slate-300 text-emerald-600"
+            />
+            Usar como base para IA
+          </label>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={!canManageTemplates || createTemplate.isPending}
+          >
+            <Plus aria-hidden="true" />
+            Criar template
+          </Button>
+          {!canManageTemplates ? (
+            <p className="text-xs leading-5 text-slate-500">
+              Apenas administradores podem alterar templates.
+            </p>
+          ) : null}
+        </form>
+
+        <div className="space-y-3">
+          {(templatesQuery.data ?? []).map((template) => (
+            <div
+              key={template.id}
+              className="rounded-md border border-slate-200 bg-white p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-semibold text-slate-950">
+                      {template.titulo}
+                    </h3>
+                    <Badge variant={template.ativo ? 'success' : 'warning'}>
+                      {template.ativo ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                    {template.uso_ia ? <Badge>IA</Badge> : null}
+                  </div>
+                  <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+                    {template.categoria}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!canManageTemplates || toggleTemplate.isPending}
+                    onClick={() =>
+                      toggleTemplate.mutate({
+                        id: template.id,
+                        ativo: !template.ativo,
+                      })
+                    }
+                  >
+                    {template.ativo ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!canManageTemplates || deleteTemplate.isPending}
+                    onClick={() => deleteTemplate.mutate(template)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
+                </div>
+              </div>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                {template.conteudo_texto}
+              </p>
+            </div>
+          ))}
+          {templatesQuery.isLoading ? (
+            <p className="text-sm text-slate-500">Carregando templates...</p>
+          ) : null}
+          {!templatesQuery.isLoading && (templatesQuery.data ?? []).length === 0 ? (
+            <p className="text-sm text-slate-500">Nenhum template cadastrado.</p>
+          ) : null}
+        </div>
+      </div>
+    </SettingsCard>
   )
 }
 

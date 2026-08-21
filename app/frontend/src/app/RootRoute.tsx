@@ -5,23 +5,29 @@ import {
   Columns3,
   Inbox,
   LayoutDashboard,
+  LogOut,
   Search,
   Settings,
   ShieldCheck,
+  Users,
 } from 'lucide-react'
 
 import { NotificationsPanel } from '@/components/notifications/NotificationsPanel'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/lib/AuthProvider'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { label: 'Dashboard', to: '/', icon: LayoutDashboard },
   { label: 'CRM', to: '/crm', icon: Columns3 },
   { label: 'Inbox', to: '/inbox', icon: Inbox },
+  { label: 'Equipes', to: '/teams', icon: Users },
   { label: 'Configurações', to: '/settings', icon: Settings },
 ]
 
 export function RootRoute() {
+  const auth = useAuth()
+
   return (
     <div className="min-h-svh bg-[#f4f7f5] text-slate-950">
       <Toaster richColors position="top-right" />
@@ -87,6 +93,10 @@ export function RootRoute() {
               </div>
 
               <div className="ml-auto flex items-center gap-2">
+                <div className="hidden text-right sm:block">
+                  <p className="text-xs font-semibold text-slate-800">{auth.user?.nome}</p>
+                  <p className="text-[11px] text-slate-500">{auth.user?.role}</p>
+                </div>
                 <a
                   className="hidden rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 sm:inline-flex"
                   href="https://lumixengine.com"
@@ -96,6 +106,14 @@ export function RootRoute() {
                   Site institucional
                 </a>
                 <NotificationsPanel />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Sair"
+                  onClick={auth.logout}
+                >
+                  <LogOut aria-hidden="true" />
+                </Button>
                 <Button variant="outline" size="icon" aria-label="Configurações" asChild>
                   <Link to="/settings">
                     <Settings aria-hidden="true" />

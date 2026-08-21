@@ -3,6 +3,16 @@ import "dotenv/config";
 import cors from "@fastify/cors";
 import { PrismaPg } from "@prisma/adapter-pg";
 import Fastify from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
+import {
+  createHmac,
+  createPublicKey,
+  randomBytes,
+  scrypt as scryptCallback,
+  timingSafeEqual,
+  verify as verifySignature,
+} from "node:crypto";
+import { promisify } from "node:util";
 import { Server as SocketIOServer } from "socket.io";
 import { z } from "zod";
 
@@ -14,6 +24,7 @@ import {
   NotificationTipo,
   Prisma,
   PrismaClient,
+  UserRole,
 } from "../generated/prisma/client.js";
 import {
   getMailStatus,
@@ -33,6 +44,9 @@ import {
 const PORT = Number(process.env.PORT ?? 3333);
 const HOST = process.env.HOST ?? "0.0.0.0";
 const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:5173";
+const JWT_SECRET = process.env.JWT_SECRET ?? "lumixengine-dev-secret-change-me";
+const JWT_EXPIRES_IN_SECONDS = Number(process.env.JWT_EXPIRES_IN_SECONDS ?? 60 * 60 * 12);
+const scrypt = promisify(scryptCallback);
 
 function parseOriginList(value: string | undefined) {
   return (value ?? "")
@@ -86,10 +100,14 @@ const leadInclude = {
   },
 } satisfies Prisma.LeadInclude;
 
+const userInclude = {
+  team: true,
+} satisfies Prisma.UserInclude;
+
 await app.register(cors, {
   origin: allowedOrigins,
   methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Accept"],
+  allowedHeaders: ["Content-Type", "Accept", "Authorization", "X-Idempotency-Key"],
   credentials: true,
 });
 
@@ -144,11 +162,85 @@ const sendMessageSchema = z.object({
   lead_id: z.string().trim().min(1),
   conteudo: z.string().trim().min(1),
   user_id: z.string().trim().min(1).optional(),
+  client_request_id: z.string().trim().min(8).optional(),
   channels: z
     .array(z.enum(["WHATSAPP", "EMAIL"]))
     .min(1)
     .optional()
     .default(["WHATSAPP"]),
+});
+
+const loginSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string().min(6),
+});
+
+const bootstrapSchema = z.object({
+  nome: z.string().trim().min(1),
+  email: z.string().trim().email(),
+  password: z.string().min(8),
+});
+
+const googleLoginSchema = z.object({
+  credential: z.string().trim().min(20),
+});
+
+const userCreateSchema = z.object({
+  nome: z.string().trim().min(1),
+  email: z.string().trim().email(),
+  password: z.string().min(8).optional(),
+  role: z.enum([UserRole.ADMIN, UserRole.ATENDENTE]).default(UserRole.ATENDENTE),
+  team_id: z.string().trim().min(1).nullable().optional(),
+  ativo: z.boolean().optional(),
+});
+
+const userUpdateSchema = z
+  .object({
+    nome: z.string().trim().min(1).optional(),
+    email: z.string().trim().email().optional(),
+    password: z.string().min(8).nullable().optional(),
+    role: z.enum([UserRole.ADMIN, UserRole.ATENDENTE]).optional(),
+    team_id: z.string().trim().min(1).nullable().optional(),
+    ativo: z.boolean().optional(),
+  })
+  .refine((payload) => Object.keys(payload).length > 0, {
+    message: "Informe pelo menos um campo para atualizar.",
+  });
+
+const teamCreateSchema = z.object({
+  nome: z.string().trim().min(1),
+  descricao: z.string().trim().nullable().optional(),
+  ativo: z.boolean().optional(),
+});
+
+const teamUpdateSchema = teamCreateSchema.partial().refine(
+  (payload) => Object.keys(payload).length > 0,
+  {
+    message: "Informe pelo menos um campo para atualizar.",
+  },
+);
+
+const messageTemplateCreateSchema = z.object({
+  titulo: z.string().trim().min(1),
+  categoria: z.string().trim().min(1).default("geral"),
+  conteudo_texto: z.string().trim().min(1),
+  ativo: z.boolean().optional(),
+  uso_ia: z.boolean().optional(),
+});
+
+const messageTemplateUpdateSchema = messageTemplateCreateSchema.partial().refine(
+  (payload) => Object.keys(payload).length > 0,
+  {
+    message: "Informe pelo menos um campo para atualizar.",
+  },
+);
+
+const messageSuggestionSchema = z.object({
+  lead_id: z.string().trim().min(1),
+  intent: z
+    .enum(["boas_vindas", "qualificacao", "follow_up", "proposta", "recuperacao"])
+    .optional()
+    .default("follow_up"),
 });
 
 const appSettingsSchema = z.object({
@@ -160,6 +252,7 @@ const appSettingsSchema = z.object({
   INTERNAL_LEAD_NOTIFICATION_EMAIL: z.string().trim().optional(),
   WHATSAPP_API_URL: z.string().trim().optional(),
   WHATSAPP_API_TOKEN: z.string().trim().optional(),
+  GOOGLE_CLIENT_ID: z.string().trim().optional(),
 });
 
 const testEmailSchema = z.object({
@@ -322,6 +415,377 @@ function isTechnicalWhatsAppEvent(body: unknown) {
   );
 }
 
+function extractWhatsAppProviderMessageId(body: unknown) {
+  return (
+    getNestedString(body, ["provider_message_id"]) ??
+    getNestedString(body, ["messageId"]) ??
+    getNestedString(body, ["id"]) ??
+    getNestedString(body, ["data", "key", "id"]) ??
+    getNestedString(body, ["data", "id"])
+  );
+}
+
+type AuthUser = {
+  id: string;
+  email: string;
+  nome: string;
+  role: UserRole;
+};
+
+declare module "fastify" {
+  interface FastifyRequest {
+    user?: AuthUser;
+  }
+}
+
+function base64UrlJson(value: unknown) {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function signJwt(user: AuthUser) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64UrlJson({
+    alg: "HS256",
+    typ: "JWT",
+  });
+  const payload = base64UrlJson({
+    sub: user.id,
+    email: user.email,
+    nome: user.nome,
+    role: user.role,
+    iat: now,
+    exp: now + JWT_EXPIRES_IN_SECONDS,
+  });
+  const signature = createHmac("sha256", JWT_SECRET)
+    .update(`${header}.${payload}`)
+    .digest("base64url");
+
+  return `${header}.${payload}.${signature}`;
+}
+
+function parseJwtPayload(token: string) {
+  const [, payload] = token.split(".");
+
+  if (!payload) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      sub?: string;
+      email?: string;
+      nome?: string;
+      role?: UserRole;
+      exp?: number;
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function verifyJwt(token: string) {
+  const [header, payload, signature] = token.split(".");
+
+  if (!header || !payload || !signature) {
+    return undefined;
+  }
+
+  const expectedSignature = createHmac("sha256", JWT_SECRET)
+    .update(`${header}.${payload}`)
+    .digest("base64url");
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+
+  if (
+    signatureBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(signatureBuffer, expectedBuffer)
+  ) {
+    return undefined;
+  }
+
+  const jwtPayload = parseJwtPayload(token);
+  const now = Math.floor(Date.now() / 1000);
+
+  if (!jwtPayload?.sub || !jwtPayload.exp || jwtPayload.exp < now) {
+    return undefined;
+  }
+
+  return jwtPayload;
+}
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const derivedKey = (await scrypt(password, salt, 64)) as Buffer;
+
+  return `scrypt$${salt}$${derivedKey.toString("hex")}`;
+}
+
+async function verifyPassword(password: string, passwordHash: string | null) {
+  if (!passwordHash) {
+    return false;
+  }
+
+  if (passwordHash.startsWith("$2a$10$seed.")) {
+    return password === "Lumix@2026";
+  }
+
+  const [algorithm, salt, storedHash] = passwordHash.split("$");
+
+  if (algorithm !== "scrypt" || !salt || !storedHash) {
+    return false;
+  }
+
+  const storedBuffer = Buffer.from(storedHash, "hex");
+  const derivedKey = (await scrypt(password, salt, storedBuffer.length)) as Buffer;
+
+  return (
+    storedBuffer.length === derivedKey.length &&
+    timingSafeEqual(storedBuffer, derivedKey)
+  );
+}
+
+function toSafeUser<
+  T extends {
+    id: string;
+    nome: string;
+    email: string;
+    role: UserRole;
+    ativo: boolean;
+    avatar_url: string | null;
+    google_id?: string | null;
+    team_id: string | null;
+    ultimo_login: Date | null;
+    data_criacao: Date;
+    team?: unknown;
+  },
+>(user: T) {
+  return {
+    id: user.id,
+    nome: user.nome,
+    email: user.email,
+    role: user.role,
+    ativo: user.ativo,
+    avatar_url: user.avatar_url,
+    google_id: user.google_id ?? null,
+    team_id: user.team_id,
+    ultimo_login: user.ultimo_login,
+    data_criacao: user.data_criacao,
+    ...(user.team !== undefined ? { team: user.team } : {}),
+  };
+}
+
+function isPublicRequest(request: FastifyRequest) {
+  if (request.method === "OPTIONS") {
+    return true;
+  }
+
+  const path = request.url.split("?")[0] ?? "";
+
+  return (
+    path === "/health" ||
+    path === "/api/health" ||
+    path.startsWith("/api/auth/") ||
+    path.startsWith("/api/webhooks") ||
+    path.startsWith("/webhooks")
+  );
+}
+
+async function requireAuthenticatedRequest(
+  request: FastifyRequest,
+  reply: FastifyReply,
+) {
+  const path = request.url.split("?")[0] ?? "";
+
+  if (
+    (!request.url.startsWith("/api") && !["/leads"].includes(path)) ||
+    isPublicRequest(request)
+  ) {
+    return;
+  }
+
+  const authHeader = request.headers.authorization;
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length)
+    : undefined;
+  const jwtPayload = token ? verifyJwt(token) : undefined;
+
+  if (!jwtPayload?.sub) {
+    return reply.status(401).send({
+      error: "unauthorized",
+      message: "Sessao expirada ou token ausente.",
+    });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: jwtPayload.sub,
+    },
+  });
+
+  if (!user?.ativo) {
+    return reply.status(401).send({
+      error: "inactive_user",
+      message: "Usuario inativo ou inexistente.",
+    });
+  }
+
+  request.user = {
+    id: user.id,
+    email: user.email,
+    nome: user.nome,
+    role: user.role,
+  };
+}
+
+function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
+  if (request.user?.role !== UserRole.ADMIN) {
+    return reply.status(403).send({
+      error: "forbidden",
+      message: "Apenas administradores podem executar esta acao.",
+    });
+  }
+}
+
+let googleJwksCache:
+  | {
+      expiresAt: number;
+      keys: Array<Record<string, unknown>>;
+    }
+  | undefined;
+
+async function fetchGoogleJwks() {
+  const now = Date.now();
+
+  if (googleJwksCache && googleJwksCache.expiresAt > now) {
+    return googleJwksCache.keys;
+  }
+
+  const response = await fetch("https://www.googleapis.com/oauth2/v3/certs");
+
+  if (!response.ok) {
+    throw new Error("Nao foi possivel carregar as chaves publicas do Google.");
+  }
+
+  const cacheControl = response.headers.get("cache-control") ?? "";
+  const maxAgeMatch = /max-age=(\d+)/.exec(cacheControl);
+  const maxAge = maxAgeMatch ? Number(maxAgeMatch[1]) : 60 * 30;
+  const body = (await response.json()) as { keys?: Array<Record<string, unknown>> };
+
+  googleJwksCache = {
+    expiresAt: now + maxAge * 1000,
+    keys: body.keys ?? [],
+  };
+
+  return googleJwksCache.keys;
+}
+
+async function verifyGoogleCredential(credential: string, clientId: string) {
+  const [headerSegment, payloadSegment, signatureSegment] = credential.split(".");
+
+  if (!headerSegment || !payloadSegment || !signatureSegment) {
+    throw new Error("Token Google invalido.");
+  }
+
+  const header = JSON.parse(
+    Buffer.from(headerSegment, "base64url").toString("utf8"),
+  ) as { kid?: string; alg?: string };
+  const payload = JSON.parse(
+    Buffer.from(payloadSegment, "base64url").toString("utf8"),
+  ) as {
+    aud?: string;
+    iss?: string;
+    exp?: number;
+    sub?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+  };
+
+  if (header.alg !== "RS256" || !header.kid) {
+    throw new Error("Assinatura Google invalida.");
+  }
+
+  if (
+    payload.aud !== clientId ||
+    !["accounts.google.com", "https://accounts.google.com"].includes(
+      payload.iss ?? "",
+    ) ||
+    !payload.exp ||
+    payload.exp < Math.floor(Date.now() / 1000) ||
+    !payload.sub ||
+    !payload.email
+  ) {
+    throw new Error("Credencial Google recusada.");
+  }
+
+  const jwk = (await fetchGoogleJwks()).find((key) => key.kid === header.kid);
+
+  if (!jwk) {
+    throw new Error("Chave publica Google nao encontrada.");
+  }
+
+  const publicKey = createPublicKey({
+    key: jwk,
+    format: "jwk",
+  });
+  const isValid = verifySignature(
+    "RSA-SHA256",
+    Buffer.from(`${headerSegment}.${payloadSegment}`),
+    publicKey,
+    Buffer.from(signatureSegment, "base64url"),
+  );
+
+  if (!isValid) {
+    throw new Error("Assinatura Google invalida.");
+  }
+
+  return payload;
+}
+
+function renderTemplate(template: string, lead: Awaited<ReturnType<typeof listLeads>>[number]) {
+  const latestMessage = lead.messages[0]?.conteudo ?? "";
+  const variables: Record<string, string> = {
+    nome: lead.nome,
+    primeiro_nome: lead.nome.split(" ").filter(Boolean)[0] ?? lead.nome,
+    email: lead.email ?? "",
+    telefone: lead.telefone ?? "",
+    status: lead.status,
+    valor_estimado: lead.valor_estimado?.toString() ?? "",
+    ultima_mensagem: latestMessage,
+  };
+
+  return template.replace(/\{\{\s*([\w_]+)\s*\}\}/g, (_match, key: string) =>
+    variables[key] ?? "",
+  );
+}
+
+function buildAiSuggestion(
+  lead: Awaited<ReturnType<typeof listLeads>>[number],
+  intent: z.infer<typeof messageSuggestionSchema>["intent"],
+) {
+  const firstName = lead.nome.split(" ").filter(Boolean)[0] ?? lead.nome;
+  const latestInbound = lead.messages.find((message) => message.direcao === "INBOUND");
+  const hasValue = Boolean(lead.valor_estimado);
+
+  if (intent === "boas_vindas") {
+    return `Olá, ${firstName}! Aqui é a equipe LumixEngine. Recebemos seu contato e já vamos te ajudar. Para eu direcionar melhor, você busca site, sistema, automação ou integração?`;
+  }
+
+  if (intent === "qualificacao") {
+    return `Perfeito, ${firstName}. Para montar uma orientação mais precisa, me conta três pontos: qual processo você quer melhorar, quais ferramentas usa hoje e qual prazo ideal para colocar isso no ar?`;
+  }
+
+  if (intent === "proposta") {
+    return `Obrigado pelas informações, ${firstName}. Pelo que você descreveu${hasValue ? ` e pelo investimento estimado de R$ ${lead.valor_estimado}` : ""}, o próximo passo é estruturarmos uma proposta com escopo, prazo e integrações. Posso te enviar um resumo ainda hoje?`;
+  }
+
+  if (intent === "recuperacao") {
+    return `Oi, ${firstName}! Passando para retomar nossa conversa. Ainda faz sentido avançarmos com a solução digital para sua operação ou prefere que eu ajuste a proposta para outra prioridade?`;
+  }
+
+  return `Olá, ${firstName}! Vi sua mensagem${latestInbound ? ` sobre "${latestInbound.conteudo.slice(0, 90)}"` : ""}. Vou te ajudar com isso. Podemos alinhar rapidamente objetivo, prazo e melhor canal para retorno?`;
+}
+
 function settingCategory(key: string) {
   if (key.startsWith("SMTP_") || key === "INTERNAL_LEAD_NOTIFICATION_EMAIL") {
     return "email";
@@ -329,6 +793,10 @@ function settingCategory(key: string) {
 
   if (key.startsWith("WHATSAPP_")) {
     return "whatsapp";
+  }
+
+  if (key.startsWith("GOOGLE_")) {
+    return "auth";
   }
 
   return "system";
@@ -587,10 +1055,166 @@ async function listLeads() {
   });
 }
 
+app.addHook("preHandler", requireAuthenticatedRequest);
+
 app.get("/health", async () => ({
   status: "ok",
   service: "lumixengine-api",
 }));
+
+app.get("/api/health", async () => ({
+  status: "ok",
+  service: "lumixengine-api",
+}));
+
+app.get("/api/auth/config", async () => {
+  const settings = await getSettingsMap();
+
+  return {
+    googleClientId: settings.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? null,
+  };
+});
+
+app.post("/api/auth/bootstrap", async (request, reply) => {
+  const existingUsers = await prisma.user.count();
+
+  if (existingUsers > 0) {
+    return reply.status(409).send({
+      error: "bootstrap_unavailable",
+      message: "Bootstrap bloqueado porque ja existem usuarios cadastrados.",
+    });
+  }
+
+  const payload = bootstrapSchema.parse(request.body);
+  const user = await prisma.user.create({
+    data: {
+      nome: payload.nome,
+      email: payload.email.toLowerCase(),
+      senha_hash: await hashPassword(payload.password),
+      role: UserRole.ADMIN,
+      ultimo_login: new Date(),
+    },
+    include: userInclude,
+  });
+  const safeUser = toSafeUser(user);
+
+  return {
+    token: signJwt(safeUser),
+    user: safeUser,
+  };
+});
+
+app.post("/api/auth/login", async (request, reply) => {
+  const payload = loginSchema.parse(request.body);
+  const user = await prisma.user.findUnique({
+    where: {
+      email: payload.email.toLowerCase(),
+    },
+    include: userInclude,
+  });
+
+  if (!user || !user.ativo || !(await verifyPassword(payload.password, user.senha_hash))) {
+    return reply.status(401).send({
+      error: "invalid_credentials",
+      message: "E-mail ou senha invalidos.",
+    });
+  }
+
+  const data: Prisma.UserUpdateInput = {
+    ultimo_login: new Date(),
+  };
+
+  if (user.senha_hash?.startsWith("$2a$10$seed.")) {
+    data.senha_hash = await hashPassword(payload.password);
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+    data,
+    include: userInclude,
+  });
+  const safeUser = toSafeUser(updatedUser);
+
+  return {
+    token: signJwt(safeUser),
+    user: safeUser,
+  };
+});
+
+app.post("/api/auth/google", async (request, reply) => {
+  const payload = googleLoginSchema.parse(request.body);
+  const settings = await getSettingsMap();
+  const googleClientId = settings.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID;
+
+  if (!googleClientId) {
+    return reply.status(400).send({
+      error: "google_not_configured",
+      message: "Google Client ID nao configurado.",
+    });
+  }
+
+  try {
+    const googlePayload = await verifyGoogleCredential(
+      payload.credential,
+      googleClientId,
+    );
+    const googleId = googlePayload.sub as string;
+    const email = googlePayload.email!.toLowerCase();
+    const name = googlePayload.name ?? googlePayload.email!;
+    const picture = googlePayload.picture ?? null;
+
+    const user = await prisma.user.upsert({
+      where: {
+        email,
+      },
+      update: {
+        google_id: googleId,
+        nome: name,
+        avatar_url: picture,
+        ativo: true,
+        ultimo_login: new Date(),
+      },
+      create: {
+        email,
+        nome: name,
+        google_id: googleId,
+        avatar_url: picture,
+        role: UserRole.ATENDENTE,
+        ativo: true,
+        ultimo_login: new Date(),
+      },
+      include: userInclude,
+    });
+    const safeUser = toSafeUser(user);
+
+    return {
+      token: signJwt(safeUser),
+      user: safeUser,
+    };
+  } catch (error) {
+    app.log.warn({ error }, "Falha no login Google");
+
+    return reply.status(401).send({
+      error: "invalid_google_credential",
+      message: "Nao foi possivel validar a conta Google.",
+    });
+  }
+});
+
+app.get("/api/auth/me", async (request) => {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: {
+      id: request.user!.id,
+    },
+    include: userInclude,
+  });
+
+  return {
+    user: toSafeUser(user),
+  };
+});
 
 app.get("/api/settings", async () => {
   const [settings, mailSettings, whatsappSettings] = await Promise.all([
@@ -733,13 +1357,332 @@ app.post("/api/notifications/read-all", async () => {
   };
 });
 
-app.get("/api/users", async () =>
-  prisma.user.findMany({
+app.get("/api/teams", async () =>
+  prisma.team.findMany({
+    include: {
+      users: {
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          role: true,
+          ativo: true,
+          avatar_url: true,
+          team_id: true,
+          ultimo_login: true,
+          data_criacao: true,
+        },
+        orderBy: {
+          nome: "asc",
+        },
+      },
+    },
     orderBy: {
       nome: "asc",
     },
   }),
 );
+
+app.post("/api/teams", async (request, reply) => {
+  const forbidden = requireAdmin(request, reply);
+
+  if (forbidden) {
+    return forbidden;
+  }
+
+  const payload = teamCreateSchema.parse(request.body);
+  const team = await prisma.team.create({
+    data: {
+      nome: payload.nome,
+      descricao: payload.descricao ?? null,
+      ativo: payload.ativo ?? true,
+    },
+  });
+
+  reply.code(201);
+  return team;
+});
+
+app.patch("/api/teams/:id", async (request, reply) => {
+  const forbidden = requireAdmin(request, reply);
+
+  if (forbidden) {
+    return forbidden;
+  }
+
+  const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+  const payload = teamUpdateSchema.parse(request.body);
+  const data: Prisma.TeamUpdateInput = {};
+
+  if (payload.nome !== undefined) {
+    data.nome = payload.nome;
+  }
+
+  if (payload.descricao !== undefined) {
+    data.descricao = payload.descricao;
+  }
+
+  if (payload.ativo !== undefined) {
+    data.ativo = payload.ativo;
+  }
+
+  return prisma.team.update({
+    where: {
+      id,
+    },
+    data,
+  });
+});
+
+app.get("/api/users", async () => {
+  const users = await prisma.user.findMany({
+    include: userInclude,
+    orderBy: {
+      nome: "asc",
+    },
+  });
+
+  return users.map(toSafeUser);
+});
+
+app.post("/api/users", async (request, reply) => {
+  const forbidden = requireAdmin(request, reply);
+
+  if (forbidden) {
+    return forbidden;
+  }
+
+  const payload = userCreateSchema.parse(request.body);
+  const user = await prisma.user.create({
+    data: {
+      nome: payload.nome,
+      email: payload.email.toLowerCase(),
+      role: payload.role,
+      ativo: payload.ativo ?? true,
+      team_id: payload.team_id ?? null,
+      senha_hash: payload.password ? await hashPassword(payload.password) : null,
+    },
+    include: userInclude,
+  });
+
+  reply.code(201);
+  return toSafeUser(user);
+});
+
+app.patch("/api/users/:id", async (request, reply) => {
+  const forbidden = requireAdmin(request, reply);
+
+  if (forbidden) {
+    return forbidden;
+  }
+
+  const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+  const payload = userUpdateSchema.parse(request.body);
+  const data: Prisma.UserUpdateInput = {};
+
+  if (payload.nome !== undefined) {
+    data.nome = payload.nome;
+  }
+
+  if (payload.email !== undefined) {
+    data.email = payload.email.toLowerCase();
+  }
+
+  if (payload.password !== undefined) {
+    data.senha_hash = payload.password ? await hashPassword(payload.password) : null;
+  }
+
+  if (payload.role !== undefined) {
+    data.role = payload.role;
+  }
+
+  if (payload.team_id !== undefined) {
+    data.team = payload.team_id
+      ? {
+          connect: {
+            id: payload.team_id,
+          },
+        }
+      : {
+          disconnect: true,
+        };
+  }
+
+  if (payload.ativo !== undefined) {
+    data.ativo = payload.ativo;
+  }
+
+  const user = await prisma.user.update({
+    where: {
+      id,
+    },
+    data,
+    include: userInclude,
+  });
+
+  return toSafeUser(user);
+});
+
+app.delete("/api/users/:id", async (request, reply) => {
+  const forbidden = requireAdmin(request, reply);
+
+  if (forbidden) {
+    return forbidden;
+  }
+
+  const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+  const user = await prisma.user.update({
+    where: {
+      id,
+    },
+    data: {
+      ativo: false,
+    },
+    include: userInclude,
+  });
+
+  return toSafeUser(user);
+});
+
+app.get("/api/message-templates", async () =>
+  prisma.messageTemplate.findMany({
+    orderBy: [
+      {
+        ativo: "desc",
+      },
+      {
+        categoria: "asc",
+      },
+      {
+        titulo: "asc",
+      },
+    ],
+  }),
+);
+
+app.post("/api/message-templates", async (request, reply) => {
+  const forbidden = requireAdmin(request, reply);
+
+  if (forbidden) {
+    return forbidden;
+  }
+
+  const payload = messageTemplateCreateSchema.parse(request.body);
+  const template = await prisma.messageTemplate.create({
+    data: {
+      titulo: payload.titulo,
+      categoria: payload.categoria,
+      conteudo_texto: payload.conteudo_texto,
+      ativo: payload.ativo ?? true,
+      uso_ia: payload.uso_ia ?? false,
+    },
+  });
+
+  reply.code(201);
+  return template;
+});
+
+app.patch("/api/message-templates/:id", async (request, reply) => {
+  const forbidden = requireAdmin(request, reply);
+
+  if (forbidden) {
+    return forbidden;
+  }
+
+  const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+  const payload = messageTemplateUpdateSchema.parse(request.body);
+  const data: Prisma.MessageTemplateUpdateInput = {};
+
+  if (payload.titulo !== undefined) {
+    data.titulo = payload.titulo;
+  }
+
+  if (payload.categoria !== undefined) {
+    data.categoria = payload.categoria;
+  }
+
+  if (payload.conteudo_texto !== undefined) {
+    data.conteudo_texto = payload.conteudo_texto;
+  }
+
+  if (payload.ativo !== undefined) {
+    data.ativo = payload.ativo;
+  }
+
+  return prisma.messageTemplate.update({
+    where: {
+      id,
+    },
+    data,
+  });
+});
+
+app.delete("/api/message-templates/:id", async (request, reply) => {
+  const forbidden = requireAdmin(request, reply);
+
+  if (forbidden) {
+    return forbidden;
+  }
+
+  const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+
+  return prisma.messageTemplate.update({
+    where: {
+      id,
+    },
+    data: {
+      ativo: false,
+    },
+  });
+});
+
+app.post("/api/messages/suggest", async (request) => {
+  const payload = messageSuggestionSchema.parse(request.body);
+  const lead = await prisma.lead.findUniqueOrThrow({
+    where: {
+      id: payload.lead_id,
+    },
+    include: leadInclude,
+  });
+  const templates = await prisma.messageTemplate.findMany({
+    where: {
+      ativo: true,
+      OR: [
+        {
+          uso_ia: true,
+        },
+        {
+          categoria: payload.intent,
+        },
+      ],
+    },
+    orderBy: {
+      data_atualizacao: "desc",
+    },
+    take: 4,
+  });
+
+  const suggestions = [
+    {
+      id: "ai-contextual",
+      titulo: "Sugestão inteligente",
+      categoria: payload.intent,
+      conteudo_texto: buildAiSuggestion(lead, payload.intent),
+      origem: "AI",
+    },
+    ...templates.map((template) => ({
+      id: template.id,
+      titulo: template.titulo,
+      categoria: template.categoria,
+      conteudo_texto: renderTemplate(template.conteudo_texto, lead),
+      origem: template.uso_ia ? "AI_TEMPLATE" : "TEMPLATE",
+    })),
+  ];
+
+  return {
+    suggestions,
+  };
+});
 
 app.get("/api/leads", async () => listLeads());
 app.get("/leads", async () => listLeads());
@@ -828,8 +1771,38 @@ async function assignLeadRoute(request: { body: unknown; params: unknown }) {
 
 app.patch("/api/leads/:id/assign", assignLeadRoute);
 
-async function sendMessageRoute(request: { body: unknown }, reply: { status: (statusCode: number) => { send: (payload: unknown) => unknown } }) {
+async function sendMessageRoute(request: FastifyRequest, reply: FastifyReply) {
   const payload = sendMessageSchema.parse(request.body);
+  const headerRequestId = Array.isArray(request.headers["x-idempotency-key"])
+    ? request.headers["x-idempotency-key"][0]
+    : request.headers["x-idempotency-key"];
+  const clientRequestId = payload.client_request_id ?? headerRequestId;
+
+  if (clientRequestId) {
+    const existingMessage = await prisma.message.findUnique({
+      where: {
+        client_request_id: clientRequestId,
+      },
+      include: {
+        user: true,
+        lead: true,
+      },
+    });
+
+    if (existingMessage) {
+      return {
+        ok: true,
+        deduplicated: true,
+        delivery: {
+          ok: true,
+          skipped: true,
+          reason: "Mensagem ja registrada para esta requisicao.",
+        },
+        deliveries: {},
+        message: existingMessage,
+      };
+    }
+  }
 
   const lead = await prisma.lead.findUniqueOrThrow({
     where: {
@@ -860,6 +1833,7 @@ async function sendMessageRoute(request: { body: unknown }, reply: { status: (st
       origem: shouldSendWhatsApp ? MessageOrigem.WHATSAPP : MessageOrigem.SITE,
       direcao: MessageDirecao.OUTBOUND,
       status_envio: MessageStatusEnvio.ENVIADO,
+      ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
       ...(payload.user_id ? { user_id: payload.user_id } : {}),
     },
     include: {
@@ -1115,6 +2089,7 @@ async function sendWelcomeAutoResponse(lead: { id: string; telefone: string | nu
 async function webhookWhatsAppRoute(request: { body: unknown }, reply: { status: (statusCode: number) => { send: (payload: unknown) => unknown }; code: (statusCode: number) => unknown }) {
   const phone = extractWhatsAppPhone(request.body);
   const conteudo = extractWhatsAppText(request.body);
+  const providerMessageId = extractWhatsAppProviderMessageId(request.body);
 
   if (!phone || !conteudo) {
     if (isTechnicalWhatsAppEvent(request.body)) {
@@ -1129,6 +2104,27 @@ async function webhookWhatsAppRoute(request: { body: unknown }, reply: { status:
       error: "invalid_whatsapp_payload",
       message: "Payload sem telefone ou conteúdo de mensagem.",
     });
+  }
+
+  if (providerMessageId) {
+    const existingMessage = await prisma.message.findUnique({
+      where: {
+        provider_message_id: providerMessageId,
+      },
+      include: {
+        user: true,
+        lead: true,
+      },
+    });
+
+    if (existingMessage) {
+      return {
+        ok: true,
+        deduplicated: true,
+        lead: existingMessage.lead,
+        message: existingMessage,
+      };
+    }
   }
 
   const existingLead = await findLeadByNormalizedPhone(phone);
@@ -1161,6 +2157,7 @@ async function webhookWhatsAppRoute(request: { body: unknown }, reply: { status:
       origem: MessageOrigem.WHATSAPP,
       direcao: MessageDirecao.INBOUND,
       status_envio: MessageStatusEnvio.ENTREGUE,
+      ...(providerMessageId ? { provider_message_id: providerMessageId } : {}),
     },
     include: {
       user: true,
@@ -1254,10 +2251,24 @@ app.setErrorHandler((error, _request, reply) => {
   });
 });
 
+let isClosing = false;
+
+const closeSocketServer = () =>
+  new Promise<void>((resolve) => {
+    io.close(() => resolve());
+  });
+
 const close = async () => {
+  if (isClosing) {
+    return;
+  }
+
+  isClosing = true;
   app.log.info("Shutting down LumixEngine API");
-  await prisma.$disconnect();
-  await app.close();
+  await Promise.race([
+    Promise.all([closeSocketServer(), app.close(), prisma.$disconnect()]),
+    new Promise((resolve) => setTimeout(resolve, 5000)),
+  ]);
 };
 
 process.on("SIGINT", () => {
@@ -1268,7 +2279,50 @@ process.on("SIGTERM", () => {
   void close().finally(() => process.exit(0));
 });
 
+async function ensureDefaultMessageTemplates() {
+  const templateCount = await prisma.messageTemplate.count();
+
+  if (templateCount > 0) {
+    return;
+  }
+
+  await prisma.messageTemplate.createMany({
+    data: [
+      {
+        titulo: "Boas-vindas consultiva",
+        categoria: "boas_vindas",
+        conteudo_texto:
+          "Olá, {{primeiro_nome}}! Aqui é a equipe LumixEngine. Recebemos seu contato e já vamos te ajudar. Você busca site, sistema, automação ou integração?",
+        uso_ia: true,
+      },
+      {
+        titulo: "Qualificação rápida",
+        categoria: "qualificacao",
+        conteudo_texto:
+          "Perfeito, {{primeiro_nome}}. Para entender melhor, me conta qual processo você quer melhorar, quais ferramentas usa hoje e qual prazo ideal para iniciar?",
+        uso_ia: true,
+      },
+      {
+        titulo: "Follow-up comercial",
+        categoria: "follow_up",
+        conteudo_texto:
+          "Oi, {{primeiro_nome}}! Passando para retomar nossa conversa. Ainda faz sentido avançarmos com a solução digital para sua operação?",
+        uso_ia: true,
+      },
+      {
+        titulo: "Próximo passo proposta",
+        categoria: "proposta",
+        conteudo_texto:
+          "Obrigado pelas informações, {{primeiro_nome}}. O próximo passo é estruturarmos uma proposta com escopo, prazo e integrações. Posso te enviar um resumo?",
+        uso_ia: true,
+      },
+    ],
+  });
+}
+
 try {
+  await ensureDefaultMessageTemplates();
+
   await app.listen({
     port: PORT,
     host: HOST,

@@ -24,9 +24,24 @@ export type User = {
   id: string
   nome: string
   email: string
-  senha_hash?: string
   role: UserRole
+  ativo: boolean
+  avatar_url: string | null
+  google_id: string | null
+  team_id: string | null
+  team?: Team | null
+  ultimo_login: string | null
   data_criacao?: string
+}
+
+export type Team = {
+  id: string
+  nome: string
+  descricao: string | null
+  ativo: boolean
+  data_criacao: string
+  data_atualizacao: string
+  users?: User[]
 }
 
 export type Lead = {
@@ -51,6 +66,8 @@ export type Message = {
   origem: MessageOrigem
   direcao: MessageDirecao
   user_id: string | null
+  client_request_id: string | null
+  provider_message_id: string | null
   status_envio: MessageStatusEnvio
   data_envio: string
   user: User | null
@@ -86,6 +103,7 @@ export type SendMessagePayload = {
   lead_id: string
   conteudo: string
   user_id?: string
+  client_request_id?: string
   channels?: Array<'WHATSAPP' | 'EMAIL'>
 }
 
@@ -100,6 +118,7 @@ export type DeliveryStatus = {
 
 export type SendMessageResponse = {
   ok: boolean
+  deduplicated?: boolean
   delivery: DeliveryStatus
   deliveries?: {
     whatsapp?: DeliveryStatus
@@ -108,6 +127,54 @@ export type SendMessageResponse = {
   message: Message & {
     lead?: Lead
   }
+}
+
+export type AuthResponse = {
+  token: string
+  user: User
+}
+
+export type AuthConfig = {
+  googleClientId: string | null
+}
+
+export type CreateUserPayload = {
+  nome: string
+  email: string
+  password?: string
+  role?: UserRole
+  team_id?: string | null
+  ativo?: boolean
+}
+
+export type UpdateUserPayload = Partial<CreateUserPayload> & {
+  password?: string | null
+}
+
+export type CreateTeamPayload = {
+  nome: string
+  descricao?: string | null
+  ativo?: boolean
+}
+
+export type UpdateTeamPayload = Partial<CreateTeamPayload>
+
+export type MessageTemplate = {
+  id: string
+  titulo: string
+  categoria: string
+  conteudo_texto: string
+  ativo: boolean
+  uso_ia: boolean
+  data_criacao: string
+  data_atualizacao: string
+}
+
+export type MessageSuggestion = Pick<
+  MessageTemplate,
+  'id' | 'titulo' | 'categoria' | 'conteudo_texto'
+> & {
+  origem: 'AI' | 'AI_TEMPLATE' | 'TEMPLATE'
 }
 
 export type Notification = {
@@ -142,7 +209,8 @@ export type SettingsPayload = Partial<
     | 'SMTP_FROM'
     | 'INTERNAL_LEAD_NOTIFICATION_EMAIL'
     | 'WHATSAPP_API_URL'
-    | 'WHATSAPP_API_TOKEN',
+    | 'WHATSAPP_API_TOKEN'
+    | 'GOOGLE_CLIENT_ID',
     string
   >
 >

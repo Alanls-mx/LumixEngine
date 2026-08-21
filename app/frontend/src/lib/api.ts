@@ -1,13 +1,23 @@
 import { API_BASE_URL } from '@/lib/config'
+import { getAuthToken } from '@/lib/authToken'
 import type {
   AssignLeadPayload,
+  AuthConfig,
+  AuthResponse,
+  CreateTeamPayload,
+  CreateUserPayload,
   CreateLeadPayload,
   Lead,
+  MessageSuggestion,
+  MessageTemplate,
   Notification,
   SendMessagePayload,
   SendMessageResponse,
   SettingsPayload,
   SettingsResponse,
+  Team,
+  UpdateTeamPayload,
+  UpdateUserPayload,
   UpdateLeadPayload,
   User,
 } from '@/types/lead'
@@ -18,11 +28,13 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
 
 async function apiRequest<T>(path: string, options: RequestOptions = {}) {
   const hasBody = options.body !== undefined
+  const token = getAuthToken()
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
     body: hasBody ? JSON.stringify(options.body) : undefined,
@@ -69,14 +81,99 @@ export const leadsApi = {
     }),
 }
 
+export const authApi = {
+  config: () => apiRequest<AuthConfig>('/auth/config'),
+
+  login: (payload: { email: string; password: string }) =>
+    apiRequest<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  bootstrap: (payload: { nome: string; email: string; password: string }) =>
+    apiRequest<AuthResponse>('/auth/bootstrap', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  google: (credential: string) =>
+    apiRequest<AuthResponse>('/auth/google', {
+      method: 'POST',
+      body: { credential },
+    }),
+
+  me: () => apiRequest<{ user: User }>('/auth/me'),
+}
+
 export const usersApi = {
   list: () => apiRequest<User[]>('/users'),
+
+  create: (payload: CreateUserPayload) =>
+    apiRequest<User>('/users', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  update: (id: string, payload: UpdateUserPayload) =>
+    apiRequest<User>(`/users/${id}`, {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  deactivate: (id: string) =>
+    apiRequest<User>(`/users/${id}`, {
+      method: 'DELETE',
+    }),
+}
+
+export const teamsApi = {
+  list: () => apiRequest<Team[]>('/teams'),
+
+  create: (payload: CreateTeamPayload) =>
+    apiRequest<Team>('/teams', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  update: (id: string, payload: UpdateTeamPayload) =>
+    apiRequest<Team>(`/teams/${id}`, {
+      method: 'PATCH',
+      body: payload,
+    }),
 }
 
 export const messagesApi = {
   send: (payload: SendMessagePayload) =>
     apiRequest<SendMessageResponse>('/messages/send', {
       method: 'POST',
+      body: payload,
+    }),
+
+  suggest: (payload: {
+    lead_id: string
+    intent?: 'boas_vindas' | 'qualificacao' | 'follow_up' | 'proposta' | 'recuperacao'
+  }) =>
+    apiRequest<{ suggestions: MessageSuggestion[] }>('/messages/suggest', {
+      method: 'POST',
+      body: payload,
+    }),
+}
+
+export const messageTemplatesApi = {
+  list: () => apiRequest<MessageTemplate[]>('/message-templates'),
+
+  create: (payload: Omit<MessageTemplate, 'id' | 'data_criacao' | 'data_atualizacao'>) =>
+    apiRequest<MessageTemplate>('/message-templates', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  update: (
+    id: string,
+    payload: Partial<Omit<MessageTemplate, 'id' | 'data_criacao' | 'data_atualizacao'>>,
+  ) =>
+    apiRequest<MessageTemplate>(`/message-templates/${id}`, {
+      method: 'PATCH',
       body: payload,
     }),
 }

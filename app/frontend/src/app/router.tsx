@@ -1,15 +1,26 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
+import { ProtectedRoute } from '@/app/ProtectedRoute'
 import { RootRoute } from '@/app/RootRoute'
 import { CrmPage } from '@/routes/CrmPage'
 import { DashboardPage } from '@/routes/DashboardPage'
 import { InboxPage } from '@/routes/InboxPage'
+import { LoginPage } from '@/routes/LoginPage'
 import { SettingsPage } from '@/routes/SettingsPage'
+import { TeamsPage } from '@/routes/TeamsPage'
 
 export const router = createBrowserRouter([
   {
+    path: '/login',
+    element: <LoginPage />,
+  },
+  {
     path: '/',
-    element: <RootRoute />,
+    element: (
+      <ProtectedRoute>
+        <RootRoute />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
@@ -26,6 +37,10 @@ export const router = createBrowserRouter([
       {
         path: 'settings',
         element: <SettingsPage />,
+      },
+      {
+        path: 'teams',
+        element: <TeamsPage />,
       },
       {
         path: '*',

@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Send,
   Smile,
+  Sparkles,
   UserRound,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -17,17 +18,10 @@ import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useLeadRealtime } from '@/hooks/useLeadRealtime'
-import { leadsApi, messagesApi, usersApi } from '@/lib/api'
+import { leadsApi, messageTemplatesApi, messagesApi, usersApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { queryKeys } from '@/lib/queryClient'
-import type { Lead, Message, User } from '@/types/lead'
-
-const quickReplies = [
-  'Olá! Aqui é a equipe LumixEngine. Como podemos ajudar?',
-  'Recebemos sua mensagem e já estamos analisando sua solicitação.',
-  'Podemos agendar uma conversa rápida para entender melhor sua necessidade?',
-  'Vou te enviar mais detalhes sobre a proposta em instantes.',
-]
+import type { Lead, Message, MessageSuggestion, User } from '@/types/lead'
 
 const emojiOptions = ['🙂', '👍', '✅', '🚀', '🙏']
 type ResponseChannel = 'WHATSAPP' | 'EMAIL'
@@ -38,6 +32,10 @@ export function InboxPage() {
   const queryClient = useQueryClient()
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [messageText, setMessageText] = useState('')
+  const [suggestions, setSuggestions] = useState<MessageSuggestion[]>([])
+  const [suggestionIntent, setSuggestionIntent] = useState<
+    'boas_vindas' | 'qualificacao' | 'follow_up' | 'proposta' | 'recuperacao'
+  >('follow_up')
   const [responseChannels, setResponseChannels] = useState<ResponseChannel[]>([
     'WHATSAPP',
   ])
@@ -50,6 +48,11 @@ export function InboxPage() {
   const usersQuery = useQuery({
     queryKey: ['users'],
     queryFn: usersApi.list,
+  })
+
+  const templatesQuery = useQuery({
+    queryKey: ['message-templates'],
+    queryFn: messageTemplatesApi.list,
   })
 
   const conversations = useMemo(() => {
@@ -84,17 +87,14 @@ export function InboxPage() {
     mutationFn: messagesApi.send,
     onSuccess: (response) => {
       setMessageText('')
+      setSuggestions([])
       queryClient.setQueryData<Lead[]>(queryKeys.leads, (currentLeads = []) =>
         currentLeads.map((lead) =>
           lead.id === response.message.lead_id
             ? {
                 ...lead,
                 last_interaction_at: response.message.data_envio,
-                messages: [response.message, ...lead.messages].sort(
-                  (a, b) =>
-                    new Date(b.data_envio).getTime() -
-                    new Date(a.data_envio).getTime(),
-                ),
+                messages: upsertLocalMessage(lead.messages, response.message),
               }
             : lead,
         ),
@@ -130,6 +130,17 @@ export function InboxPage() {
     },
   })
 
+  const generateSuggestions = useMutation({
+    mutationFn: messagesApi.suggest,
+    onSuccess: (response) => {
+      setSuggestions(response.suggestions)
+      toast.success('Sugestões geradas')
+    },
+    onError: () => {
+      toast.error('Não foi possível gerar sugestões')
+    },
+  })
+
   const assignLead = useMutation({
     mutationFn: ({
       leadId,
@@ -161,9 +172,14 @@ export function InboxPage() {
       return
     }
 
+    if (sendMessage.isPending) {
+      return
+    }
+
     sendMessage.mutate({
       lead_id: selectedLead.id,
       conteudo: messageText.trim(),
+      client_request_id: crypto.randomUUID(),
       ...(selectedLead.assigned_to_id
         ? {
             user_id: selectedLead.assigned_to_id,
@@ -281,7 +297,7 @@ export function InboxPage() {
                   <select
                     className="h-9 max-w-full rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
                     defaultValue=""
-                    aria-label="Inserir resposta rápida"
+                    aria-label="Inserir template"
                     onChange={(event) => {
                       if (event.target.value) {
                         setMessageText(event.target.value)
@@ -289,13 +305,49 @@ export function InboxPage() {
                       }
                     }}
                   >
-                    <option value="">Respostas rápidas</option>
-                    {quickReplies.map((reply) => (
-                      <option key={reply} value={reply}>
-                        {reply}
+                    <option value="">Templates</option>
+                    {(templatesQuery.data ?? [])
+                      .filter((template) => template.ativo)
+                      .map((template) => (
+                      <option key={template.id} value={template.conteudo_texto}>
+                        {template.titulo}
                       </option>
                     ))}
                   </select>
+
+                  <select
+                    className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                    value={suggestionIntent}
+                    onChange={(event) =>
+                      setSuggestionIntent(
+                        event.target.value as typeof suggestionIntent,
+                      )
+                    }
+                    aria-label="Intenção da IA"
+                  >
+                    <option value="follow_up">Follow-up</option>
+                    <option value="boas_vindas">Boas-vindas</option>
+                    <option value="qualificacao">Qualificação</option>
+                    <option value="proposta">Proposta</option>
+                    <option value="recuperacao">Recuperação</option>
+                  </select>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={generateSuggestions.isPending}
+                    onClick={() =>
+                      selectedLead &&
+                      generateSuggestions.mutate({
+                        lead_id: selectedLead.id,
+                        intent: suggestionIntent,
+                      })
+                    }
+                  >
+                    <Sparkles aria-hidden="true" />
+                    IA
+                  </Button>
 
                   <div className="flex items-center gap-1">
                     <Smile className="size-4 text-slate-400" aria-hidden="true" />
@@ -313,6 +365,26 @@ export function InboxPage() {
                     ))}
                   </div>
                 </div>
+
+                {suggestions.length > 0 && (
+                  <div className="mb-3 grid gap-2 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
+                    {suggestions.map((suggestion) => (
+                      <button
+                        key={`${suggestion.origem}-${suggestion.id}`}
+                        type="button"
+                        className="rounded-md border border-emerald-100 bg-white px-3 py-2 text-left text-xs text-slate-700 transition hover:border-emerald-300"
+                        onClick={() => setMessageText(suggestion.conteudo_texto)}
+                      >
+                        <span className="block font-semibold text-slate-950">
+                          {suggestion.titulo}
+                        </span>
+                        <span className="mt-1 line-clamp-2 block">
+                          {suggestion.conteudo_texto}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-600">
                   <span className="text-slate-400">Enviar por</span>
@@ -366,6 +438,25 @@ export function InboxPage() {
       </div>
     </section>
   )
+}
+
+function upsertLocalMessage(messages: Message[], incomingMessage: Message) {
+  const exists = messages.some((message) => message.id === incomingMessage.id)
+  const nextMessages = exists
+    ? messages.map((message) =>
+        message.id === incomingMessage.id ? incomingMessage : message,
+      )
+    : [incomingMessage, ...messages]
+
+  return nextMessages
+    .filter(
+      (message, index, allMessages) =>
+        allMessages.findIndex((item) => item.id === message.id) === index,
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime(),
+    )
 }
 
 function ConversationItem({

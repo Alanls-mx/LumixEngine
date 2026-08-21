@@ -33,22 +33,38 @@ function upsertMessage(
       return lead
     }
 
-    const messageExists = lead.messages.some(
-      (message) => message.id === incomingMessage.id,
-    )
+    const isSameMessage = (message: Message) =>
+      message.id === incomingMessage.id ||
+      (Boolean(message.client_request_id) &&
+        message.client_request_id === incomingMessage.client_request_id) ||
+      (Boolean(message.provider_message_id) &&
+        message.provider_message_id === incomingMessage.provider_message_id)
+    const messageExists = lead.messages.some(isSameMessage)
     const nextMessages = messageExists
       ? lead.messages.map((message) =>
-          message.id === incomingMessage.id ? incomingMessage : message,
+          isSameMessage(message) ? { ...message, ...incomingMessage } : message,
         )
       : [incomingMessage, ...lead.messages]
 
     return {
       ...lead,
       last_interaction_at: incomingMessage.data_envio,
-      messages: nextMessages.sort(
-        (a, b) =>
-          new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime(),
-      ),
+      messages: nextMessages
+        .filter(
+          (message, index, messages) =>
+            messages.findIndex(
+              (item) =>
+                item.id === message.id ||
+                (Boolean(item.client_request_id) &&
+                  item.client_request_id === message.client_request_id) ||
+                (Boolean(item.provider_message_id) &&
+                  item.provider_message_id === message.provider_message_id),
+            ) === index,
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.data_envio).getTime() - new Date(a.data_envio).getTime(),
+        ),
     }
   })
 }
