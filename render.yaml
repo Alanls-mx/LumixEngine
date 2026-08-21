@@ -116,7 +116,7 @@ services:
       - key: FRONTEND_URL
         value: https://app.lumixengine.com
       - key: CORS_ORIGINS
-        value: https://app.lumixengine.com,https://lumixengine.com,https://www.lumixengine.com
+        value: https://app.lumixengine.com,https://lumixengine-app.onrender.com,https://lumixengine-app-frontend.onrender.com,https://lumixengine.com,https://www.lumixengine.com
       - key: DATABASE_URL
         value: file:/var/data/lumixengine-app.db
       - key: SMTP_HOST

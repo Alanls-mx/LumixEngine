@@ -45,6 +45,8 @@ const allowedOrigins = [
     FRONTEND_URL,
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://lumixengine-app.onrender.com",
+    "https://lumixengine-app-frontend.onrender.com",
     "https://lumixengine.com",
     "https://www.lumixengine.com",
     ...parseOriginList(process.env.CORS_ORIGINS),
