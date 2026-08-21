@@ -584,7 +584,10 @@ function isPublicRequest(request: FastifyRequest) {
   return (
     path === "/health" ||
     path === "/api/health" ||
-    path.startsWith("/api/auth/") ||
+    path === "/api/auth/config" ||
+    path === "/api/auth/bootstrap" ||
+    path === "/api/auth/login" ||
+    path === "/api/auth/google" ||
     path.startsWith("/api/webhooks") ||
     path.startsWith("/webhooks")
   );
