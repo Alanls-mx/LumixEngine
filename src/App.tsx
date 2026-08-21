@@ -131,9 +131,9 @@ export function App() {
         </Suspense>
       )}
       <Footer />
-      <Suspense fallback={null}>
+      <IdleRender timeout={3000}>
         <CookieConsent />
-      </Suspense>
+      </IdleRender>
       {isBudgetModalOpen ? (
         <Suspense fallback={null}>
           <DiagnosticModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} />
@@ -141,6 +141,28 @@ export function App() {
       ) : null}
     </ScenarioProvider>
   );
+}
+
+function IdleRender({ children, timeout }: { children: ReactNode; timeout: number }) {
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    const render = () => setShouldRender(true);
+    const idleCallback = 'requestIdleCallback' in window ? window.requestIdleCallback(render, { timeout }) : undefined;
+    const fallbackTimer = idleCallback === undefined ? window.setTimeout(render, timeout) : undefined;
+
+    return () => {
+      if (idleCallback !== undefined && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleCallback);
+      }
+
+      if (fallbackTimer !== undefined) {
+        window.clearTimeout(fallbackTimer);
+      }
+    };
+  }, [timeout]);
+
+  return shouldRender ? <Suspense fallback={null}>{children}</Suspense> : null;
 }
 
 function DeferredSection({ children, minHeight }: { children: ReactNode; minHeight: number }) {
