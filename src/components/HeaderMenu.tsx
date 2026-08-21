@@ -44,7 +44,7 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
           <img
             src="/assets/lumix-logo-header.webp"
             alt="LumixEngine"
-            className="h-8 w-auto max-w-[148px] flex-shrink-0 object-contain min-[360px]:h-9 min-[360px]:max-w-[180px] md:h-10 md:max-w-[220px]"
+            className="h-9 w-auto max-w-[172px] flex-shrink-0 object-contain min-[360px]:h-10 min-[360px]:max-w-[210px] md:h-12 md:max-w-[260px]"
             width={412}
             height={86}
             loading="eager"
