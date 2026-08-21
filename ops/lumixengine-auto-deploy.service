@@ -1,0 +1,10 @@
+[Unit]
+Description=LumixEngine auto deploy from GitHub
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=REPO_URL=https://github.com/Alanls-mx/LumixEngine.git
+Environment=BRANCH=main
+ExecStart=/opt/lumixengine/deploy-from-github.sh
