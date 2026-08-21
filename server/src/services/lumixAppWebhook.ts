@@ -25,7 +25,7 @@ export type AppLeadWebhookPayload = {
 };
 
 const localWebhookUrl = 'http://127.0.0.1:3333/api/webhooks/lead';
-const productionWebhookUrl = 'https://lumixengine-app-api.onrender.com/api/webhooks/lead';
+const productionWebhookUrl = 'https://app.lumixengine.com/api/webhooks/lead';
 
 function getWebhookUrl() {
   return (
