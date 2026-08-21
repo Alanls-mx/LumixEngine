@@ -84,6 +84,8 @@ const leadInclude = {
 
 await app.register(cors, {
   origin: allowedOrigins,
+  methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Accept"],
   credentials: true,
 });
 
