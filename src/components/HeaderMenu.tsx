@@ -38,15 +38,15 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
       >
         <a
           href="/"
-          className="relative flex h-12 w-[148px] flex-shrink-0 items-center overflow-hidden transition-opacity hover:opacity-90 min-[360px]:w-[180px] md:h-14 md:w-[220px]"
+          className="flex flex-shrink-0 items-center transition-opacity hover:opacity-90"
           aria-label="LumixEngine início"
         >
           <img
             src="/assets/lumix-logo-header.webp"
             alt="LumixEngine"
-            className="absolute left-0 h-[180%] max-w-none -translate-x-3 object-contain"
-            width={440}
-            height={330}
+            className="h-8 w-auto max-w-[148px] flex-shrink-0 object-contain min-[360px]:h-9 min-[360px]:max-w-[180px] md:h-10 md:max-w-[220px]"
+            width={412}
+            height={86}
             loading="eager"
             decoding="async"
           />

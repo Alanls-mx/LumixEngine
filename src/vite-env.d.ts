@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+import 'react';
+
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_GA_ID?: string;
@@ -8,4 +10,10 @@ interface ImportMetaEnv {
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
+}
+
+declare module 'react' {
+  interface HTMLAttributes<T> {
+    inert?: boolean;
+  }
 }

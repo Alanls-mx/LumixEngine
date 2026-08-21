@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -88,17 +88,11 @@ const ecosystemTabs = [
   },
 ] satisfies readonly EcosystemTab[];
 
-const contentMotion = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -10 },
-};
 const liveLoopIntervalMs = 3500;
 const ecosystemAutoplayIntervalMs = 12000;
 
 export function EcosystemSection() {
   const [activeSystemIndex, setActiveSystemIndex] = useState(0);
-  const activeTab = useMemo(() => ecosystemTabs[activeSystemIndex] ?? ecosystemTabs[0], [activeSystemIndex]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -124,37 +118,45 @@ export function EcosystemSection() {
           </p>
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            className="mt-12 grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center"
-            id={`ecosystem-panel-${activeTab.id}`}
-            role="region"
-            aria-label={`Sistema em destaque: ${activeTab.label}`}
-            key={activeTab.id}
-            initial={contentMotion.initial}
-            animate={contentMotion.animate}
-            exit={contentMotion.exit}
-            transition={{ duration: 1.8, ease: 'easeInOut' }}
-          >
-              <div className="max-w-2xl">
-                <p className="text-sm font-extrabold uppercase tracking-wide text-emerald-300">{activeTab.label}</p>
-                <h3 className="mt-4 text-[clamp(1.5rem,5vw,2.25rem)] font-extrabold tracking-normal text-white md:text-4xl">
-                  {activeTab.highlight}
-                </h3>
+        <div className="mt-12 grid grid-cols-1 grid-rows-1">
+          {ecosystemTabs.map((tab, index) => {
+            const isActive = index === activeSystemIndex;
 
-                <ul className="mt-8 space-y-5">
-                  {activeTab.topics.map((topic) => (
-                    <li className="flex gap-3 text-base leading-7 text-slate-300" key={topic}>
-                      <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />
-                      <span>{topic}</span>
-                    </li>
-                  ))}
-                </ul>
+            return (
+              <div
+                className={`col-start-1 row-start-1 grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center ${
+                  isActive
+                    ? 'opacity-100 z-10 pointer-events-auto transition-opacity duration-500'
+                    : 'opacity-0 z-0 pointer-events-none transition-opacity duration-500'
+                }`}
+                id={`ecosystem-panel-${tab.id}`}
+                role={isActive ? 'region' : undefined}
+                aria-hidden={!isActive}
+                aria-label={isActive ? `Sistema em destaque: ${tab.label}` : undefined}
+                inert={isActive ? undefined : true}
+                key={tab.id}
+              >
+                <div className="max-w-2xl">
+                  <p className="text-sm font-extrabold uppercase tracking-wide text-emerald-300">{tab.label}</p>
+                  <h3 className="mt-4 text-[clamp(1.5rem,5vw,2.25rem)] font-extrabold tracking-normal text-white md:text-4xl">
+                    {tab.highlight}
+                  </h3>
+
+                  <ul className="mt-8 space-y-5">
+                    {tab.topics.map((topic) => (
+                      <li className="flex gap-3 text-base leading-7 text-slate-300" key={topic}>
+                        <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />
+                        <span>{topic}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <EcosystemVisual tab={tab} />
               </div>
-
-              <EcosystemVisual tab={activeTab} />
-            </motion.div>
-          </AnimatePresence>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
