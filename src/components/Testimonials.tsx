@@ -73,7 +73,7 @@ export function Testimonials() {
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <div className="hidden grid-cols-[0.7fr_1fr_1fr] border-b border-slate-800 py-4 text-xs font-extrabold uppercase tracking-wide text-slate-500 md:grid">
+          <div className="hidden grid-cols-[0.7fr_1fr_1fr] border-b border-slate-800 py-4 text-xs font-extrabold uppercase tracking-wide text-slate-400 md:grid">
             <div>Etapa</div>
             <div>Como é hoje</div>
             <div>Com a LumixEngine</div>
@@ -92,14 +92,14 @@ export function Testimonials() {
               key={row.step}
             >
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500 md:hidden">
+                <p className="text-xs font-extrabold uppercase tracking-wide text-slate-400 md:hidden">
                   Etapa
                 </p>
                 <p className="mt-1 text-base font-extrabold text-white md:mt-0">{row.step}</p>
               </div>
 
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500 md:hidden">
+                <p className="text-xs font-extrabold uppercase tracking-wide text-slate-400 md:hidden">
                   Como é hoje
                 </p>
                 <p className="mt-1 max-w-xl text-sm leading-6 text-slate-400 md:mt-0">{row.current}</p>
@@ -133,7 +133,7 @@ export function Testimonials() {
               key={metric.label}
             >
               <div>
-                <p className="text-[clamp(1.875rem,7vw,2.25rem)] font-black tracking-normal text-white md:text-4xl">
+                <p className="text-[clamp(1.875rem,7vw,2.25rem)] font-extrabold tracking-normal text-white md:text-4xl">
                   {metric.value}
                 </p>
                 <p className="mt-2 text-sm font-bold leading-6 text-slate-300">

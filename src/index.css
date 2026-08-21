@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/fonts/plus-jakarta-sans-latin-400-800.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -90,10 +98,26 @@
     animation-delay: 120ms;
   }
 
+  .cookie-consent {
+    animation: cookie-consent-enter 240ms ease-out both;
+  }
+
   @keyframes hero-reveal {
     from {
       opacity: 0;
       transform: translate3d(0, 14px, 0);
+    }
+
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes cookie-consent-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 1rem, 0);
     }
 
     to {

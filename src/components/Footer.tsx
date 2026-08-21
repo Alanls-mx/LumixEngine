@@ -1,6 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
 import { Github, Instagram, Linkedin } from 'lucide-react';
-import wordMarkLogo from '../../WordMark.png';
 import { openCookieSettings } from '../lib/cookieSettings';
 
 type SocialLink = {
@@ -33,9 +32,11 @@ export function Footer() {
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 text-center md:flex-row md:text-left">
         <a href="/" className="opacity-80 transition-opacity hover:opacity-100" aria-label="LumixEngine início">
           <img
-            src={wordMarkLogo}
+            src="/assets/lumix-wordmark-footer.webp"
             alt="LumixEngine"
             className="h-9 w-auto object-contain"
+            width={320}
+            height={107}
             loading="lazy"
             decoding="async"
           />
@@ -46,7 +47,7 @@ export function Footer() {
         </p>
 
         <div className="flex flex-col items-center gap-3 md:items-end">
-          <p className="text-sm font-semibold text-slate-500">© 2026 LumixEngine.</p>
+          <p className="text-sm font-semibold text-slate-400">© 2026 LumixEngine.</p>
           <nav className="flex items-center gap-2" aria-label="Redes sociais">
             {socialLinks.map((socialLink) => {
               const Icon = socialLink.icon;
@@ -65,7 +66,7 @@ export function Footer() {
               );
             })}
           </nav>
-          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-bold text-slate-500" aria-label="Links legais">
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-bold text-slate-400" aria-label="Links legais">
             <a className="transition hover:text-emerald-200" href="/termos-de-uso">
               Termos de Uso
             </a>

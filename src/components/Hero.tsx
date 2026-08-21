@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, MessageCircle } from 'lucide-react';
 import { heroContent, whatsappLinks } from '../constants/content';
 
@@ -81,6 +81,7 @@ export function Hero({ onOpenBudgetForm }: HeroProps) {
 }
 
 function DeferredMockChat() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
 
   useEffect(() => {
@@ -88,23 +89,51 @@ function DeferredMockChat() {
       return;
     }
 
-    const load = () => setShouldLoad(true);
-    const idleCallback = 'requestIdleCallback' in window ? window.requestIdleCallback(load, { timeout: 1200 }) : undefined;
-    const timeout = idleCallback === undefined ? window.setTimeout(load, 450) : undefined;
+    const container = containerRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    const load = () => {
+      const idleCallback = 'requestIdleCallback' in window ? window.requestIdleCallback(() => setShouldLoad(true), { timeout: 900 }) : undefined;
+      const timeout = idleCallback === undefined ? window.setTimeout(() => setShouldLoad(true), 160) : undefined;
+
+      return () => {
+        if (idleCallback !== undefined && 'cancelIdleCallback' in window) {
+          window.cancelIdleCallback(idleCallback);
+        }
+
+        if (timeout !== undefined) {
+          window.clearTimeout(timeout);
+        }
+      };
+    };
+
+    let cancelLoad: (() => void) | undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        cancelLoad = load();
+        observer.disconnect();
+      },
+      { rootMargin: '0px 0px 160px 0px' },
+    );
+
+    observer.observe(container);
 
     return () => {
-      if (idleCallback !== undefined && 'cancelIdleCallback' in window) {
-        window.cancelIdleCallback(idleCallback);
-      }
-
-      if (timeout !== undefined) {
-        window.clearTimeout(timeout);
-      }
+      observer.disconnect();
+      cancelLoad?.();
     };
   }, []);
 
   return (
-    <div className="hidden min-h-[620px] min-[360px]:block">
+    <div ref={containerRef} className="hidden min-h-[620px] min-[360px]:block">
       {shouldLoad ? (
         <Suspense fallback={<MockChatShell />}>
           <MockChat />

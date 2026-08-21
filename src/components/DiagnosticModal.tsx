@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ClipboardList, MessageCircle, Send, X } from 'lucide-react';
 import { whatsappLinks } from '../constants/content';
@@ -55,6 +55,8 @@ const investmentOptions = [
 ] satisfies readonly { label: string; value: Exclude<InvestmentOption, ''> }[];
 
 export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [formState, setFormState] = useState<BudgetFormState>(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -65,9 +67,40 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
       return;
     }
 
+    const previouslyFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.preventDefault();
         onClose();
+        return;
+      }
+
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const focusableElements = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const firstFocusableElement = focusableElements[0];
+      const lastFocusableElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstFocusableElement) {
+        event.preventDefault();
+        lastFocusableElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastFocusableElement) {
+        event.preventDefault();
+        firstFocusableElement.focus();
       }
     };
 
@@ -75,8 +108,10 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
+      previouslyFocusedElement?.focus();
     };
   }, [isOpen, onClose]);
 
@@ -177,6 +212,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
           transition={{ duration: 0.2, ease: 'easeOut' }}
         >
           <motion.div
+            ref={dialogRef}
             className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-slate-800 bg-panel/95 shadow-[0_26px_90px_rgba(0,0,0,0.48)]"
             initial={{ opacity: 0, scale: 0.96, y: 18, filter: 'blur(8px)' }}
             animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
@@ -186,6 +222,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400" />
 
             <button
+              ref={closeButtonRef}
               className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-white/20 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               aria-label="Fechar formulário de orçamento"
@@ -224,7 +261,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
                   <label className="block">
                     <span className="text-sm font-bold text-slate-200">Nome completo</span>
                     <input
-                      className="mt-2 w-full rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
+                      className="mt-2 w-full rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
                       type="text"
                       value={formState.fullName}
                       onChange={(event) => updateField('fullName', event.target.value)}
@@ -238,7 +275,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
                   <label className="block">
                     <span className="text-sm font-bold text-slate-200">E-mail</span>
                     <input
-                      className="mt-2 w-full rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
+                      className="mt-2 w-full rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
                       type="email"
                       value={formState.email}
                       onChange={(event) => updateField('email', event.target.value)}
@@ -253,7 +290,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
                 <label className="block">
                   <span className="text-sm font-bold text-slate-200">Telefone / WhatsApp</span>
                   <input
-                    className="mt-2 w-full rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
+                    className="mt-2 w-full rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
                     type="tel"
                     inputMode="numeric"
                     maxLength={15}
@@ -312,7 +349,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
                 <label className="block">
                   <span className="text-sm font-bold text-slate-200">Fale sobre seu projeto / necessidade</span>
                   <textarea
-                    className="mt-2 min-h-32 w-full resize-none rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
+                    className="mt-2 min-h-32 w-full resize-none rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
                     value={formState.projectDescription}
                     onChange={(event) => updateField('projectDescription', event.target.value)}
                     placeholder="Ex: preciso de uma loja virtual integrada ao estoque e com pagamento Pix."

@@ -56,7 +56,7 @@ const segmentProfiles: Record<ScenarioId, SegmentProfile> = {
   padrao: {
     name: 'LumixEngine',
     status: 'Online agora',
-    avatarUrl: '/Icone.png',
+    avatarUrl: '/assets/lumix-icon-96.webp',
   },
   clinica: {
     name: 'Clínica Lumix Saúde',
@@ -727,6 +727,8 @@ export const MockChat = memo(function MockChat() {
               src={activeProfile.avatarUrl}
               alt={profileName}
               className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
+              width={40}
+              height={40}
               loading="eager"
               decoding="async"
             />
@@ -879,7 +881,7 @@ function NicheSelectorBubble({ activeScenarioId, options, onSelect }: NicheSelec
           ))}
         </div>
 
-        <div className="mt-2 flex items-center justify-end gap-1 text-xs font-medium text-gray-500">
+        <div className="mt-2 flex items-center justify-end gap-1 text-xs font-medium text-gray-600">
           <span>19:42</span>
         </div>
       </div>
@@ -963,7 +965,7 @@ function ChatMessageBubble({
           <CheckoutCard message={message} isCopied={copiedMessageId === message.id} onCopyPix={onCopyPix} />
         ) : null}
 
-        <div className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-gray-500">
+        <div className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-gray-600">
           <span>19:42</span>
           {isClient ? <CheckCheck className="h-3.5 w-3.5 text-sky-300" aria-hidden="true" /> : null}
         </div>

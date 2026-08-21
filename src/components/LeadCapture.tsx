@@ -126,7 +126,7 @@ export function LeadCapture() {
                 <label className="block">
                   <span className="mb-2 block text-xs font-extrabold uppercase text-slate-300">Nome completo</span>
                   <input
-                    className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
+                    className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
                     type="text"
                     value={formState.fullName}
                     onChange={(event) => updateField('fullName', event.target.value)}
@@ -140,7 +140,7 @@ export function LeadCapture() {
                 <label className="block">
                   <span className="mb-2 block text-xs font-extrabold uppercase text-slate-300">E-mail</span>
                   <input
-                    className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
+                    className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
                     type="email"
                     value={formState.email}
                     onChange={(event) => updateField('email', event.target.value)}
@@ -155,7 +155,7 @@ export function LeadCapture() {
               <label className="block">
                 <span className="mb-2 block text-xs font-extrabold uppercase text-slate-300">Telefone / WhatsApp</span>
                 <input
-                  className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
+                  className="min-h-12 w-full rounded-lg border border-white/10 bg-white/5 px-5 text-sm font-semibold text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
                   type="tel"
                   value={formState.phone}
                   onChange={(event) => updateField('phone', formatPhone(event.target.value))}
@@ -176,7 +176,7 @@ export function LeadCapture() {
               <label className="block">
                 <span className="mb-2 block text-xs font-extrabold uppercase text-slate-300">Sua mensagem</span>
                 <textarea
-                  className="min-h-32 w-full resize-none rounded-lg border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
+                  className="min-h-32 w-full resize-none rounded-lg border border-white/10 bg-white/5 px-5 py-4 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400/70 focus:ring-2 focus:ring-emerald-400/30 disabled:opacity-70"
                   value={formState.message}
                   onChange={(event) => updateField('message', event.target.value)}
                   placeholder="Conte rapidamente o que você precisa melhorar ou construir."

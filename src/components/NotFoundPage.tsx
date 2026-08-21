@@ -25,7 +25,7 @@ export function NotFoundPage() {
             Página não encontrada
           </div>
 
-          <h1 id="not-found-title" className="mt-6 max-w-3xl text-[clamp(2.5rem,14vw,6rem)] font-black leading-none tracking-normal text-white">
+          <h1 id="not-found-title" className="mt-6 max-w-3xl text-[clamp(2.5rem,14vw,6rem)] font-extrabold leading-none tracking-normal text-white">
             404
           </h1>
           <p className="mt-5 max-w-2xl text-[clamp(1.75rem,7vw,3rem)] font-extrabold leading-tight tracking-normal text-white md:text-5xl">
@@ -75,7 +75,7 @@ export function NotFoundPage() {
 
             <div className="mt-6 grid gap-4">
               <div className="rounded-lg border border-white/5 bg-white/[0.04] p-4">
-                <p className="text-xs font-extrabold uppercase tracking-wide text-slate-500">Status</p>
+                <p className="text-xs font-extrabold uppercase tracking-wide text-slate-400">Status</p>
                 <p className="mt-2 text-lg font-extrabold text-white">URL fora do mapa público</p>
                 <p className="mt-2 text-sm leading-6 text-slate-300">
                   Mantemos a navegação simples para você voltar rapidamente ao conteúdo principal.

@@ -12,7 +12,6 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import qrCodePix from '../../QRCodePix.png';
 
 type EcosystemTabId = 'automation' | 'scheduling' | 'payments' | 'team' | 'ecommerce';
 type EcosystemVisualType = 'analytics' | 'calendar' | 'payment' | 'team' | 'commerce';
@@ -325,6 +324,8 @@ function CalendarVisual() {
             className="h-11 w-11 rounded-full object-cover"
             src={imageAssets.doctor}
             alt="Dra. Beatriz Santos"
+            width={44}
+            height={44}
             loading="lazy"
           />
           <div className="min-w-0">
@@ -460,7 +461,14 @@ function TeamDashboardVisual() {
             className="flex items-center gap-3 rounded-xl border border-slate-800 bg-night/70 p-3 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:bg-white/[0.07]"
             key={agent.name}
           >
-            <img className="h-12 w-12 rounded-full object-cover" src={agent.image} alt={agent.name} loading="lazy" />
+            <img
+              className="h-12 w-12 rounded-full object-cover"
+              src={agent.image}
+              alt={agent.name}
+              width={48}
+              height={48}
+              loading="lazy"
+            />
             <div className="min-w-0">
               <p className="truncate text-sm font-extrabold text-white">{agent.name}</p>
               <p className="text-xs font-bold text-emerald-200">{agent.role}</p>
@@ -521,7 +529,7 @@ function CommerceVisual() {
           <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div>
               <p className="text-sm font-extrabold">Lumix Store</p>
-              <p className="text-xs font-bold text-slate-500">Landing + checkout rápido</p>
+              <p className="text-xs font-bold text-slate-400">Landing + checkout rápido</p>
             </div>
             <Globe2 className="h-5 w-5 text-emerald-400" aria-hidden="true" />
           </div>
@@ -536,6 +544,8 @@ function CommerceVisual() {
                   className="mb-3 h-20 w-full rounded-xl object-cover"
                   src={product.image}
                   alt={product.name}
+                  width={180}
+                  height={80}
                   loading="lazy"
                 />
                 <p className="min-h-10 text-xs font-extrabold leading-5">{product.name}</p>
@@ -566,10 +576,12 @@ function CommerceVisual() {
                 className="h-14 w-full rounded-xl object-cover"
                 src={imageAssets.sofa}
                 alt="Carrinho com sofá retrátil premium"
+                width={160}
+                height={56}
                 loading="lazy"
               />
               <p className="mt-2 text-xs font-extrabold text-gray-900">Kit Sofá Retrátil</p>
-              <p className="text-xs font-bold text-gray-500">2 itens no carrinho</p>
+              <p className="text-xs font-bold text-gray-600">2 itens no carrinho</p>
             </div>
           </div>
         </div>
@@ -671,8 +683,10 @@ function PaymentVisual() {
           </AnimatePresence>
           <img
             className="mx-auto mt-5 h-32 w-32 rounded-xl bg-white object-cover p-2 shadow-[0_14px_34px_rgba(0,0,0,0.28)]"
-            src={qrCodePix}
+            src="/assets/pix-qrcode-240.webp"
             alt="QR Code Pix para confirmação de pagamento"
+            width={240}
+            height={240}
             loading="lazy"
           />
         </div>

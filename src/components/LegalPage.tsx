@@ -121,7 +121,7 @@ export function LegalPage({ type }: LegalPageProps) {
               {content.title}
             </h1>
             <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300 md:text-lg">{content.description}</p>
-            <p className="mt-4 text-sm font-bold text-slate-500">Última atualização: {updatedAt}</p>
+            <p className="mt-4 text-sm font-bold text-slate-400">Última atualização: {updatedAt}</p>
 
             <div className="mt-10 grid gap-4">
               {content.sections.map((section) => (

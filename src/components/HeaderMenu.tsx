@@ -1,6 +1,5 @@
 import { useCallback, useState, type MouseEvent } from 'react';
 import { Menu } from 'lucide-react';
-import fullLogo from '../../LogoSF.png';
 
 type HeaderMenuProps = {
   onOpenBudgetForm: () => void;
@@ -43,9 +42,11 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
           aria-label="LumixEngine início"
         >
           <img
-            src={fullLogo}
+            src="/assets/lumix-logo-header.webp"
             alt="LumixEngine"
             className="absolute left-0 h-[180%] max-w-none -translate-x-3 object-contain"
+            width={440}
+            height={330}
             loading="eager"
             decoding="async"
           />

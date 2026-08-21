@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { Cookie, Settings, X } from 'lucide-react';
 import { cookieConsentKey, openCookieSettingsEvent } from '../lib/cookieSettings';
 
@@ -29,19 +28,17 @@ export function CookieConsent() {
     setIsVisible(false);
   }, []);
 
+  if (!isVisible) {
+    return null;
+  }
+
   return (
-    <AnimatePresence>
-      {isVisible ? (
-        <motion.div
-          className="fixed inset-x-0 bottom-0 z-[70] px-3 pb-safe min-[360px]:px-4 md:px-6"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 16 }}
-          transition={{ duration: 0.24, ease: 'easeOut' }}
-          role="dialog"
-          aria-labelledby="cookie-consent-title"
-          aria-describedby="cookie-consent-description"
-        >
+        <div
+          className="cookie-consent fixed inset-x-0 bottom-0 z-[70] px-3 pb-safe min-[360px]:px-4 md:px-6"
+      role="dialog"
+      aria-labelledby="cookie-consent-title"
+      aria-describedby="cookie-consent-description"
+    >
           <div className="mx-auto max-w-5xl rounded-xl border border-slate-800 bg-panel/95 p-5 shadow-soft backdrop-blur-md md:flex md:items-center md:gap-6 md:p-6">
             <div className="flex min-w-0 gap-4">
               <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-100">
@@ -76,8 +73,6 @@ export function CookieConsent() {
               </button>
             </div>
           </div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
+    </div>
   );
 }
