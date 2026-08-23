@@ -203,7 +203,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
     <AnimatePresence>
       {isOpen ? (
         <motion.div
-          className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overflow-touch bg-black/70 px-3 py-6 pb-safe backdrop-blur-md min-[360px]:px-4"
+          className="fixed inset-0 z-[80] flex items-start justify-center overflow-hidden bg-black/70 px-2 py-3 pb-safe pt-safe backdrop-blur-md min-[360px]:px-3 sm:px-4 sm:py-6"
           aria-labelledby="budget-modal-title"
           aria-modal="true"
           role="dialog"
@@ -219,7 +219,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
         >
           <motion.div
             ref={dialogRef}
-            className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-slate-800 bg-panel/95 shadow-[0_26px_90px_rgba(0,0,0,0.48)]"
+            className="relative flex max-h-[calc(100svh-1.75rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-slate-800 bg-panel/95 shadow-[0_26px_90px_rgba(0,0,0,0.48)] sm:max-h-[calc(100svh-3rem)]"
             initial={{ opacity: 0, scale: 0.96, y: 18, filter: 'blur(8px)' }}
             animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
             exit={{ opacity: 0, scale: 0.96, y: 16, filter: 'blur(8px)' }}
@@ -229,7 +229,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
 
             <button
               ref={closeButtonRef}
-              className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-200 transition hover:border-white/20 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-panel/90 text-slate-200 shadow-[0_12px_36px_rgba(0,0,0,0.28)] transition hover:border-white/20 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:cursor-not-allowed disabled:opacity-60 sm:right-4 sm:top-4"
               type="button"
               aria-label="Fechar formulário de orçamento"
               onClick={handleClose}
@@ -238,20 +238,20 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
               <X className="h-5 w-5" aria-hidden="true" />
             </button>
 
-            <div className="p-4 min-[360px]:p-6 sm:p-8">
+            <div className="min-h-0 flex-1 overflow-y-auto overflow-touch p-4 pb-6 min-[360px]:p-5 min-[360px]:pb-7 sm:p-8 [scrollbar-color:rgba(148,163,184,0.35)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-500/40 [&::-webkit-scrollbar-track]:bg-transparent">
               <div className="flex items-start gap-4 pr-12">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-emerald-950 shadow-[0_18px_60px_rgba(16,185,129,0.22)]">
+                <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-emerald-500 text-emerald-950 shadow-[0_18px_60px_rgba(16,185,129,0.22)] min-[390px]:flex">
                   <ClipboardList className="h-6 w-6" aria-hidden="true" />
                 </div>
                 <div>
-                  <h2 id="budget-modal-title" className="text-[clamp(1.5rem,7vw,1.875rem)] font-extrabold tracking-normal text-white sm:text-3xl">
+                  <h2 id="budget-modal-title" className="text-[clamp(1.35rem,6vw,1.875rem)] font-extrabold tracking-normal text-white sm:text-3xl">
                     Solicitar orçamento
                   </h2>
-                  <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:mt-3 sm:text-base">
                     Conte o que precisa construir ou melhorar. Enviamos os dados direto para o LumixEngine App e retornamos com um próximo passo claro.
                   </p>
                   <a
-                    className="mt-4 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-slate-100 transition hover:border-emerald-400/40 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-slate-100 transition hover:border-emerald-400/40 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400 sm:mt-4"
                     href={whatsappLinks.budget}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -262,7 +262,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
                 </div>
               </div>
 
-              <form className="mt-8 grid gap-5" onSubmit={handleSubmit} autoComplete="off" noValidate>
+              <form className="mt-6 grid gap-4 sm:mt-8 sm:gap-5" onSubmit={handleSubmit} autoComplete="off" noValidate>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="text-sm font-bold text-slate-200">Nome completo</span>
@@ -355,7 +355,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
                 <label className="block">
                   <span className="text-sm font-bold text-slate-200">Fale sobre seu projeto / necessidade</span>
                   <textarea
-                    className="mt-2 min-h-32 w-full resize-none rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70"
+                    className="mt-2 min-h-24 w-full resize-none rounded-lg border border-slate-800 bg-night/70 px-4 py-3 text-sm font-semibold leading-6 text-white outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/25 disabled:opacity-70 sm:min-h-32"
                     value={formState.projectDescription}
                     onChange={(event) => updateField('projectDescription', event.target.value)}
                     placeholder="Ex: preciso de uma loja virtual integrada ao estoque e com pagamento Pix."
@@ -367,7 +367,7 @@ export function DiagnosticModal({ isOpen, onClose }: DiagnosticModalProps) {
 
                 <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
                   <button
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-6 py-4 text-sm font-extrabold text-emerald-950 shadow-[0_18px_60px_rgba(16,185,129,0.22)] transition-all duration-300 hover:-translate-y-1 hover:bg-emerald-400 hover:shadow-[0_22px_70px_rgba(16,185,129,0.30)] focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-6 py-3.5 text-sm font-extrabold text-emerald-950 shadow-[0_18px_60px_rgba(16,185,129,0.22)] transition-all duration-300 hover:-translate-y-1 hover:bg-emerald-400 hover:shadow-[0_22px_70px_rgba(16,185,129,0.30)] focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-panel disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 sm:py-4"
                     type="submit"
                     disabled={isSubmitting}
                   >
