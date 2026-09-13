@@ -99,10 +99,12 @@
 
   .case-gallery-item.portrait img {
     aspect-ratio: 4 / 5;
+    object-fit: contain;
   }
 
   .case-gallery-item.wide img {
-    aspect-ratio: 16 / 7;
+    aspect-ratio: auto;
+    object-fit: contain;
   }
 
   @media (max-width: 767px) {
