@@ -58,7 +58,7 @@ export function CinemaCasePage() {
       </section>
 
       <nav className="case-chapters sticky top-[68px] z-30 overflow-x-auto border-y border-slate-800 bg-[#090e18]/95" aria-label="Capitulos do case">
-        <div className="mx-auto flex w-max min-w-full max-w-7xl gap-7 px-5 py-4 text-sm font-bold text-slate-300 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-max min-w-full max-w-7xl gap-7 px-5 py-4 text-sm font-bold text-slate-300 sm:px-6 md:justify-center lg:px-8">
           <a href="#visao" className="transition hover:text-white">Visão geral</a>
           <a href="#catalogo" className="transition hover:text-white">Catálogo</a>
           <a href="#jornada" className="transition hover:text-white">Jornada</a>
