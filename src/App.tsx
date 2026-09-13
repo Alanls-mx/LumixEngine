@@ -29,6 +29,9 @@ const PortfolioPage = lazy(() =>
 const CinemaCasePage = lazy(() =>
   import('./components/CinemaCasePage').then((module) => ({ default: module.CinemaCasePage })),
 );
+const PortfolioShowcase = lazy(() =>
+  import('./components/PortfolioShowcase').then((module) => ({ default: module.PortfolioShowcase })),
+);
 
 const siteUrl = 'https://lumixengine.com';
 
@@ -150,6 +153,9 @@ export function App() {
           </DeferredSection>
           <DeferredSection minHeight={760}>
             <EcosystemSection />
+          </DeferredSection>
+          <DeferredSection minHeight={720}>
+            <PortfolioShowcase />
           </DeferredSection>
           <DeferredSection minHeight={720}>
             <Testimonials />

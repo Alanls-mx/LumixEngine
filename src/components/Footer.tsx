@@ -68,6 +68,9 @@ export function Footer() {
             })}
           </nav>
           <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-bold text-slate-400" aria-label="Links legais">
+            <a className="transition hover:text-emerald-200" href="/portfolio">
+              Portfólio
+            </a>
             <a className="transition hover:text-emerald-200" href="/termos-de-uso">
               Termos de Uso
             </a>
