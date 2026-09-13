@@ -23,6 +23,12 @@ const LegalPage = lazy(() => import('./components/LegalPage').then((module) => (
 const NotFoundPage = lazy(() =>
   import('./components/NotFoundPage').then((module) => ({ default: module.NotFoundPage })),
 );
+const PortfolioPage = lazy(() =>
+  import('./components/PortfolioPage').then((module) => ({ default: module.PortfolioPage })),
+);
+const CinemaCasePage = lazy(() =>
+  import('./components/CinemaCasePage').then((module) => ({ default: module.CinemaCasePage })),
+);
 
 const siteUrl = 'https://lumixengine.com';
 
@@ -46,6 +52,18 @@ const routeMetadata = {
     description:
       'Confira as condições de uso do site, conteúdos demonstrativos e canais comerciais da LumixEngine.',
     path: '/termos-de-uso',
+    robots: 'index, follow',
+  },
+  portfolio: {
+    title: 'Portfólio | LumixEngine',
+    description: 'Conheça projetos digitais desenvolvidos pela LumixEngine e explore cada experiência diretamente na página.',
+    path: '/portfolio',
+    robots: 'index, follow',
+  },
+  cinemaCase: {
+    title: 'Plataforma para cinemas | Portfolio LumixEngine',
+    description: 'Case de uma plataforma completa para cinemas, da descoberta de filmes à venda, operação e relacionamento.',
+    path: '/portfolio/plataforma-para-cinemas',
     robots: 'index, follow',
   },
   notFound: {
@@ -83,7 +101,17 @@ export function App() {
       : currentPath === '/termos-de-uso'
         ? 'terms'
         : null;
-  const pageMetadata = legalPageType ? routeMetadata[legalPageType] : isHomePage ? routeMetadata.home : routeMetadata.notFound;
+  const isPortfolioPage = currentPath === '/portfolio' || currentPath === '/portfolio/';
+  const isCinemaCasePage = currentPath === '/portfolio/plataforma-para-cinemas' || currentPath === '/portfolio/plataforma-para-cinemas/';
+  const pageMetadata = legalPageType
+    ? routeMetadata[legalPageType]
+    : isHomePage
+      ? routeMetadata.home
+      : isPortfolioPage
+        ? routeMetadata.portfolio
+        : isCinemaCasePage
+          ? routeMetadata.cinemaCase
+          : routeMetadata.notFound;
 
   useEffect(() => {
     const absoluteUrl = `${siteUrl}${pageMetadata.path}`;
@@ -105,6 +133,14 @@ export function App() {
       {legalPageType ? (
         <Suspense fallback={null}>
           <LegalPage type={legalPageType} />
+        </Suspense>
+      ) : isPortfolioPage ? (
+        <Suspense fallback={null}>
+          <PortfolioPage />
+        </Suspense>
+      ) : isCinemaCasePage ? (
+        <Suspense fallback={null}>
+          <CinemaCasePage />
         </Suspense>
       ) : isHomePage ? (
         <main className="overflow-hidden">

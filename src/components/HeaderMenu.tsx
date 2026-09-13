@@ -53,6 +53,9 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
         </a>
 
         <div className="hidden items-center gap-8 text-sm font-medium text-gray-200 md:flex">
+          <a href="/portfolio" className="transition hover:text-white">
+            Portfólio
+          </a>
           <a href="#solucoes" className="transition hover:text-white" onClick={(event) => handleSmoothScroll(event, '#solucoes')}>
             Soluções
           </a>
@@ -90,7 +93,10 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
         id={mobileMenuId}
         className={isMenuOpen ? 'block border-t border-borderline px-3 pb-4 min-[360px]:px-5 lg:hidden' : 'hidden'}
       >
-        <div className="grid grid-cols-1 gap-2 pt-4 text-center text-sm font-bold text-slate-300 min-[360px]:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 pt-4 text-center text-sm font-bold text-slate-300">
+          <a href="/portfolio" className="rounded-lg border border-slate-800 bg-panel px-3 py-2">
+            Portfólio
+          </a>
           <a
             href="#solucoes"
             className="rounded-lg border border-slate-800 bg-panel px-3 py-2"
@@ -118,7 +124,7 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
               setIsMenuOpen(false);
               onOpenBudgetForm();
             }}
-            className="rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400 min-[360px]:col-span-3"
+            className="col-span-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400"
           >
             Solicitar Proposta
           </button>
