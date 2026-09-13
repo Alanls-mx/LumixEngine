@@ -163,9 +163,9 @@ export function App() {
           <DeferredSection minHeight={620}>
             <FAQ />
           </DeferredSection>
-          <DeferredSection minHeight={520}>
+          <Suspense fallback={<div style={{ minHeight: 520 }} aria-hidden="true" />}>
             <LeadCapture />
-          </DeferredSection>
+          </Suspense>
         </main>
       ) : (
         <Suspense fallback={null}>

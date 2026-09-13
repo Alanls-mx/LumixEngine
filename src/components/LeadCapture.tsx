@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, MessageCircle, Send } from 'lucide-react';
 import { whatsappLinks } from '../constants/content';
@@ -25,6 +25,19 @@ export function LeadCapture() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (window.location.hash !== '#contato') {
+      return;
+    }
+
+    const scrollToContact = () => {
+      document.querySelector('#contato')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    const timers = [0, 300, 900, 1600].map((delay) => window.setTimeout(scrollToContact, delay));
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, []);
 
   const updateField = <Key extends keyof QuickContactForm>(field: Key, value: QuickContactForm[Key]) => {
     setFormState((current) => ({
@@ -94,7 +107,7 @@ export function LeadCapture() {
   return (
     <section
       id="contato"
-      className="bg-[#0B101B] px-3 py-12 min-[360px]:px-5 md:px-8 md:py-16"
+      className="scroll-mt-24 bg-[#0B101B] px-3 py-12 min-[360px]:px-5 md:px-8 md:py-16"
       aria-labelledby="lead-capture-title"
     >
       <motion.div
