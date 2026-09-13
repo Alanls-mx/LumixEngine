@@ -141,26 +141,44 @@ const routes = [
     path: '/politica-de-privacidade',
     output: 'politica-de-privacidade/index.html',
     title: 'Política de Privacidade | LumixEngine',
-    description: 'Entenda como a LumixEngine trata dados enviados pelo site, formulários e canais de contato comercial.',
+    description: 'Saiba quais dados a LumixEngine trata, para quais finalidades, como funcionam os cookies opcionais e como exercer seus direitos pela LGPD.',
     image: '/og-image.png',
     type: 'WebPage',
     content: `
       ${sharedHeader}
-      <main><section class="prerender-hero"><p class="prerender-eyebrow">LGPD e privacidade</p><h1>Política de Privacidade</h1><p>Explicamos como a LumixEngine trata dados enviados pelo site e pelos canais de atendimento.</p></section>
-      <section><h2>Dados coletados</h2><p>Coletamos apenas os dados informados voluntariamente em formulários ou contatos comerciais.</p><h2>Finalidade de uso</h2><p>Os dados são usados para responder pedidos de orçamento, prestar suporte comercial e melhorar a experiência de contato.</p><h2>Cookies e medição</h2><p>Cookies de medição são utilizados somente após o consentimento do visitante.</p><h2>Direitos do titular</h2><p>Você pode solicitar acesso, correção ou exclusão dos seus dados pelos canais oficiais.</p></section></main>
+      <main><section class="prerender-hero"><h1>Política de Privacidade</h1><p>Este documento explica quais dados a LumixEngine trata quando você navega pelo site, solicita um orçamento ou inicia uma conversa pelos canais indicados.</p><p>Atualizada em 13 de setembro de 2026.</p></section>
+      <section><h2>1. Controlador e escopo</h2><p>A LumixEngine é operada por 68.685.237 Alan Luiz da Silva, CNPJ 68.685.237/0001-97. Esta política abrange lumixengine.com, seus formulários comerciais e os dados encaminhados ao LumixEngine App.</p>
+      <h2>2. Dados que podem ser tratados</h2><p>Podemos tratar nome, e-mail, telefone, mensagem, solução de interesse, faixa de investimento, contexto da página, navegador, idioma, fuso horário, parâmetros de campanha, endereço IP e dados técnicos de segurança.</p>
+      <h2>3. Finalidades e bases legais</h2><p>Os dados são usados para responder solicitações, preparar propostas, organizar o relacionamento comercial, proteger os serviços e cumprir obrigações aplicáveis. A medição opcional depende de consentimento.</p>
+      <h2>4. Compartilhamento e operadores</h2><p>Fornecedores de hospedagem, segurança, comunicação, CRM e análise podem processar apenas os dados necessários à sua função. Links externos passam a observar também as políticas das plataformas acessadas.</p>
+      <h2>5. Cookies, armazenamento local e medição</h2><p>A escolha de consentimento é armazenada localmente. Google Analytics e Meta Pixel não são carregados antes do aceite e podem ser recusados ou revogados nas Configurações de Cookies.</p>
+      <h2>6. Retenção e segurança</h2><p>Dados são mantidos enquanto necessários às finalidades informadas, à relação comercial e às obrigações legais. Aplicamos HTTPS, validação, limitação de requisições e acesso administrativo autenticado.</p>
+      <h2>7. Processamento em outros países</h2><p>Fornecedores globais podem processar dados fora do Brasil mediante medidas adequadas ao tratamento.</p>
+      <h2>8. Seus direitos</h2><p>Você pode solicitar confirmação, acesso, correção, informação sobre compartilhamento, portabilidade, bloqueio, anonimização ou eliminação quando aplicável, além de revogar consentimento.</p>
+      <h2>9. Crianças e dados sensíveis</h2><p>O site é destinado a contatos profissionais e não solicita intencionalmente dados de crianças, adolescentes ou dados pessoais sensíveis.</p>
+      <h2>10. Contato e atualizações</h2><p>Solicitações sobre privacidade podem ser enviadas para contact@lumixengine.com.</p></section></main>
       ${sharedFooter}`,
   },
   {
     path: '/termos-de-uso',
     output: 'termos-de-uso/index.html',
     title: 'Termos de Uso | LumixEngine',
-    description: 'Confira as condições de uso do site, conteúdos demonstrativos e canais comerciais da LumixEngine.',
+    description: 'Confira as condições de uso do site, do portfólio, das demonstrações e dos canais comerciais da LumixEngine.',
     image: '/og-image.png',
     type: 'WebPage',
     content: `
       ${sharedHeader}
-      <main><section class="prerender-hero"><p class="prerender-eyebrow">Condições de uso</p><h1>Termos de Uso</h1><p>Regras para o uso do site, dos conteúdos demonstrativos e dos canais comerciais da LumixEngine.</p></section>
-      <section><h2>Uso do site</h2><p>O visitante deve usar o site de forma lícita, sem comprometer a segurança ou a disponibilidade dos sistemas.</p><h2>Conteúdos e simulações</h2><p>Métricas, fluxos e exemplos visuais têm finalidade demonstrativa e variam conforme cada projeto.</p><h2>Orçamentos e propostas</h2><p>O contato não cria obrigação automática de contratação; cada proposta segue seu escopo, prazo e complexidade.</p><h2>Propriedade intelectual</h2><p>Textos, layout, marca, imagens e componentes pertencem à LumixEngine ou são usados sob licença adequada.</p></section></main>
+      <main><section class="prerender-hero"><h1>Termos de Uso</h1><p>Estes termos regulam a navegação no site institucional da LumixEngine, o acesso ao portfólio e o uso dos canais de contato comercial.</p><p>Atualizados em 13 de setembro de 2026.</p></section>
+      <section><h2>1. Identificação e aceite</h2><p>O site é mantido pela LumixEngine, operada por 68.685.237 Alan Luiz da Silva, CNPJ 68.685.237/0001-97. A Política de Privacidade complementa estes Termos.</p>
+      <h2>2. Finalidade do site</h2><p>O site apresenta capacidades, projetos e formas de contato. Formulários e diagnósticos iniciais não constituem contratação automática ou garantia de resultado.</p>
+      <h2>3. Portfólio, demonstrações e resultados</h2><p>Cases, telas, fluxos e métricas podem usar dados fictícios, imagens ilustrativas ou informações anonimizadas. Cada novo projeto depende de escopo próprio.</p>
+      <h2>4. Uso permitido e condutas vedadas</h2><p>Não é permitido explorar vulnerabilidades, contornar limites, enviar conteúdo ilícito, extrair conteúdo em massa ou usar a marca de modo enganoso.</p>
+      <h2>5. Propriedade intelectual</h2><p>Marca, textos, layout, componentes, código e materiais próprios são protegidos. Direitos de terceiros permanecem com seus titulares.</p>
+      <h2>6. Links e serviços externos</h2><p>WhatsApp, redes sociais e outros serviços externos possuem termos e políticas próprios.</p>
+      <h2>7. Disponibilidade e responsabilidade</h2><p>O site pode passar por manutenção e depender de terceiros. Informações pontualmente imprecisas serão corrigidas quando identificadas.</p>
+      <h2>8. Privacidade e comunicações</h2><p>Dados pessoais seguem a Política de Privacidade. O envio de formulário autoriza o retorno relacionado à solicitação informada.</p>
+      <h2>9. Alterações e legislação aplicável</h2><p>Aplicam-se as leis brasileiras, preservados os direitos do consumidor quando cabíveis.</p>
+      <h2>10. Contato</h2><p>Dúvidas podem ser enviadas para contact@lumixengine.com.</p></section></main>
       ${sharedFooter}`,
   },
 ];

@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Cookie, Settings, X } from 'lucide-react';
-import { cookieConsentKey, openCookieSettingsEvent } from '../lib/cookieSettings';
-
-function hasCookieConsent() {
-  return window.localStorage.getItem(cookieConsentKey) === 'true';
-}
+import {
+  getCookieConsentPreference,
+  openCookieSettingsEvent,
+  setCookieConsentPreference,
+} from '../lib/cookieSettings';
 
 export function CookieConsent() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    setIsVisible(!hasCookieConsent());
+    setIsVisible(getCookieConsentPreference() === null);
 
     const handleOpenSettings = () => setIsVisible(true);
     window.addEventListener(openCookieSettingsEvent, handleOpenSettings);
@@ -19,12 +19,12 @@ export function CookieConsent() {
   }, []);
 
   const acceptCookies = useCallback(() => {
-    window.localStorage.setItem(cookieConsentKey, 'true');
+    setCookieConsentPreference('accepted');
     setIsVisible(false);
   }, []);
 
-  const revokeCookies = useCallback(() => {
-    window.localStorage.removeItem(cookieConsentKey);
+  const rejectOptionalCookies = useCallback(() => {
+    setCookieConsentPreference('rejected');
     setIsVisible(false);
   }, []);
 
@@ -49,7 +49,7 @@ export function CookieConsent() {
                   Controle de cookies
                 </h2>
                 <p id="cookie-consent-description" className="mt-2 text-sm leading-6 text-slate-300">
-                  Usamos cookies de medição somente após consentimento para entender conversões e melhorar o site. Salvamos localmente apenas a preferência de aceite.
+                  Recursos essenciais mantêm o site funcionando. Google Analytics e Meta Pixel só são carregados se você aceitar a medição opcional.
                 </p>
               </div>
             </div>
@@ -58,10 +58,10 @@ export function CookieConsent() {
               <button
                 type="button"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-800 bg-white/5 px-5 py-3 text-sm font-extrabold text-white transition hover:border-emerald-500/30 hover:bg-emerald-400/10"
-                onClick={revokeCookies}
+                onClick={rejectOptionalCookies}
               >
                 <X className="h-4 w-4" aria-hidden="true" />
-                Agora não
+                Recusar opcionais
               </button>
               <button
                 type="button"
@@ -69,7 +69,7 @@ export function CookieConsent() {
                 onClick={acceptCookies}
               >
                 <Settings className="h-4 w-4" aria-hidden="true" />
-                Aceitar cookies
+                Aceitar medição
               </button>
             </div>
           </div>

@@ -46,14 +46,14 @@ const routeMetadata = {
   privacy: {
     title: 'Política de Privacidade | LumixEngine',
     description:
-      'Entenda como a LumixEngine trata dados enviados pelo site, formulários e canais de contato comercial.',
+      'Saiba quais dados a LumixEngine trata, para quais finalidades, como funcionam os cookies opcionais e como exercer seus direitos pela LGPD.',
     path: '/politica-de-privacidade',
     robots: 'index, follow',
   },
   terms: {
     title: 'Termos de Uso | LumixEngine',
     description:
-      'Confira as condições de uso do site, conteúdos demonstrativos e canais comerciais da LumixEngine.',
+      'Confira as condições de uso do site, do portfólio, das demonstrações e dos canais comerciais da LumixEngine.',
     path: '/termos-de-uso',
     robots: 'index, follow',
   },
@@ -99,9 +99,9 @@ export function App() {
   const currentPath = window.location.pathname;
   const isHomePage = currentPath === '/';
   const legalPageType =
-    currentPath === '/politica-de-privacidade'
+    currentPath === '/politica-de-privacidade' || currentPath === '/politica-de-privacidade/'
       ? 'privacy'
-      : currentPath === '/termos-de-uso'
+      : currentPath === '/termos-de-uso' || currentPath === '/termos-de-uso/'
         ? 'terms'
         : null;
   const isPortfolioPage = currentPath === '/portfolio' || currentPath === '/portfolio/';
