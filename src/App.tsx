@@ -132,7 +132,10 @@ export function App() {
 
   return (
     <ScenarioProvider>
-      <HeaderMenu onOpenBudgetForm={() => setIsBudgetModalOpen(true)} />
+      <HeaderMenu
+        compact={isPortfolioPage || isCinemaCasePage}
+        onOpenBudgetForm={() => setIsBudgetModalOpen(true)}
+      />
       {legalPageType ? (
         <Suspense fallback={null}>
           <LegalPage type={legalPageType} />

@@ -3,9 +3,10 @@ import { Menu } from 'lucide-react';
 
 type HeaderMenuProps = {
   onOpenBudgetForm: () => void;
+  compact?: boolean;
 };
 
-export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
+export function HeaderMenu({ onOpenBudgetForm, compact = false }: HeaderMenuProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const mobileMenuId = 'mobile-menu';
 
@@ -56,12 +57,16 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
           <a href="/portfolio" className="transition hover:text-white">
             Portfólio
           </a>
-          <a href="#solucoes" className="transition hover:text-white" onClick={(event) => handleSmoothScroll(event, '#solucoes')}>
-            Soluções
-          </a>
-          <a href="#beneficios" className="transition hover:text-white" onClick={(event) => handleSmoothScroll(event, '#beneficios')}>
-            Benefícios
-          </a>
+          {!compact ? (
+            <>
+              <a href="#solucoes" className="transition hover:text-white" onClick={(event) => handleSmoothScroll(event, '#solucoes')}>
+                Soluções
+              </a>
+              <a href="#beneficios" className="transition hover:text-white" onClick={(event) => handleSmoothScroll(event, '#beneficios')}>
+                Benefícios
+              </a>
+            </>
+          ) : null}
           <a href="#contato" className="transition hover:text-white" onClick={(event) => handleSmoothScroll(event, '#contato')}>
             Contato
           </a>
@@ -97,20 +102,24 @@ export function HeaderMenu({ onOpenBudgetForm }: HeaderMenuProps) {
           <a href="/portfolio" className="rounded-lg border border-slate-800 bg-panel px-3 py-2">
             Portfólio
           </a>
-          <a
-            href="#solucoes"
-            className="rounded-lg border border-slate-800 bg-panel px-3 py-2"
-            onClick={(event) => handleSmoothScroll(event, '#solucoes')}
-          >
-            Soluções
-          </a>
-          <a
-            href="#beneficios"
-            className="rounded-lg border border-slate-800 bg-panel px-3 py-2"
-            onClick={(event) => handleSmoothScroll(event, '#beneficios')}
-          >
-            Benefícios
-          </a>
+          {!compact ? (
+            <>
+              <a
+                href="#solucoes"
+                className="rounded-lg border border-slate-800 bg-panel px-3 py-2"
+                onClick={(event) => handleSmoothScroll(event, '#solucoes')}
+              >
+                Soluções
+              </a>
+              <a
+                href="#beneficios"
+                className="rounded-lg border border-slate-800 bg-panel px-3 py-2"
+                onClick={(event) => handleSmoothScroll(event, '#beneficios')}
+              >
+                Benefícios
+              </a>
+            </>
+          ) : null}
           <a
             href="#contato"
             className="rounded-lg border border-slate-800 bg-panel px-3 py-2"

@@ -8,6 +8,28 @@ const capabilities = [
   { icon: Utensils, title: 'Bomboniere', text: 'Estoque, preparo, entrega e composição financeira por item.' },
 ] as const;
 
+type CinemaGalleryItem = (typeof cinemaCaseGallery)[number];
+
+function CinemaGalleryFigure({ item }: { item: CinemaGalleryItem }) {
+  return (
+    <figure id={item.id} className={`case-gallery-item ${item.aspect}`}>
+      <div className={`case-gallery-media overflow-hidden rounded-2xl ${item.aspect === 'portrait' ? '' : 'bg-slate-900'}`}>
+        <img
+          src={item.image}
+          alt={item.title}
+          className="h-auto w-full object-cover transition duration-500 ease-out hover:scale-[1.015]"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+      <figcaption className="px-1 pb-6 pt-5">
+        <h3 className="text-xl font-extrabold text-white">{item.title}</h3>
+        <p className="mt-2 max-w-[62ch] text-sm leading-6 text-slate-300">{item.description}</p>
+      </figcaption>
+    </figure>
+  );
+}
+
 export function CinemaCasePage() {
   return (
     <main className="portfolio-surface bg-[#070b13]">
@@ -38,6 +60,7 @@ export function CinemaCasePage() {
       <nav className="case-chapters sticky top-[68px] z-30 overflow-x-auto border-y border-slate-800 bg-[#090e18]/95" aria-label="Capitulos do case">
         <div className="mx-auto flex w-max min-w-full max-w-7xl gap-7 px-5 py-4 text-sm font-bold text-slate-300 sm:px-6 lg:px-8">
           <a href="#visao" className="transition hover:text-white">Visão geral</a>
+          <a href="#catalogo" className="transition hover:text-white">Catálogo</a>
           <a href="#jornada" className="transition hover:text-white">Jornada</a>
           <a href="#operacao" className="transition hover:text-white">Operação</a>
           <a href="#relacionamento" className="transition hover:text-white">Relacionamento</a>
@@ -79,23 +102,15 @@ export function CinemaCasePage() {
           </p>
         </div>
 
-        <div className="case-gallery mt-14">
-          {cinemaCaseGallery.map((item) => (
-            <figure id={item.id} key={item.id} className={`case-gallery-item ${item.aspect}`}>
-              <div className="overflow-hidden rounded-2xl bg-slate-900">
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="h-full w-full object-cover transition duration-500 ease-out hover:scale-[1.015]"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-              <figcaption className="px-1 pb-6 pt-5">
-                <h3 className="text-xl font-extrabold text-white">{item.title}</h3>
-                <p className="mt-2 max-w-[62ch] text-sm leading-6 text-slate-300">{item.description}</p>
-              </figcaption>
-            </figure>
+        <div className="mt-14 grid gap-5 md:grid-cols-2">
+          {cinemaCaseGallery.slice(0, 2).map((item) => (
+            <CinemaGalleryFigure key={item.id} item={item} />
+          ))}
+        </div>
+
+        <div className="case-gallery mt-5">
+          {cinemaCaseGallery.slice(2).map((item) => (
+            <CinemaGalleryFigure key={item.id} item={item} />
           ))}
         </div>
       </section>

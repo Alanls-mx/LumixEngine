@@ -40,6 +40,20 @@ export const portfolioHighlights = [
 
 export const cinemaCaseGallery = [
   {
+    id: 'catalogo',
+    title: 'Filmes apresentados com contexto editorial',
+    description: 'Destaques, selos e informações essenciais ajudam o público a descobrir o próximo filme antes de escolher a sessão.',
+    image: '/assets/portfolio/cinemas/catalogo-cliente.webp',
+    aspect: 'landscape',
+  },
+  {
+    id: 'gestao-catalogo',
+    title: 'Catálogo administrável pela equipe',
+    description: 'O painel reúne publicação, status, sessões e edição dos dados do filme em um fluxo consistente.',
+    image: '/assets/portfolio/cinemas/catalogo-admin.webp',
+    aspect: 'landscape',
+  },
+  {
     id: 'jornada',
     title: 'Escolha de poltronas com disponibilidade real',
     description: 'O mapa respeita o desenho da sala, identifica lugares acessíveis e acompanha reservas temporárias.',

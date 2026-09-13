@@ -98,8 +98,12 @@
   }
 
   .case-gallery-item.portrait img {
-    aspect-ratio: 4 / 5;
-    object-fit: contain;
+    aspect-ratio: auto;
+  }
+
+  .case-gallery-item.portrait .case-gallery-media {
+    max-width: 30rem;
+    margin-inline: auto;
   }
 
   .case-gallery-item.wide img {
