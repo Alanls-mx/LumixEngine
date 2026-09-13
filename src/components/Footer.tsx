@@ -43,7 +43,7 @@ export function Footer() {
         </a>
 
         <div className="max-w-2xl text-sm leading-6 text-slate-400">
-          <p>Sites, lojas virtuais, sistemas web, automações e integrações sob medida para negócios locais.</p>
+          <p>Produtos digitais demonstrados por interfaces, fluxos interativos e cases em profundidade.</p>
           <p className="mt-1 text-xs font-semibold text-slate-500">CNPJ 68.685.237/0001-97</p>
         </div>
 

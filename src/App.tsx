@@ -37,9 +37,9 @@ const siteUrl = 'https://lumixengine.com';
 
 const routeMetadata = {
   home: {
-    title: 'LumixEngine | Soluções digitais sob medida',
+    title: 'LumixEngine | Produtos digitais demonstrados na prática',
     description:
-      'LumixEngine desenvolve sites, landing pages, lojas virtuais, sistemas web, automações e integrações sob medida para negócios locais.',
+      'Explore simulações interativas, interfaces operacionais e cases que demonstram como a LumixEngine constrói produtos digitais completos.',
     path: '/',
     robots: 'index, follow',
   },
@@ -59,7 +59,7 @@ const routeMetadata = {
   },
   portfolio: {
     title: 'Portfólio | LumixEngine',
-    description: 'Conheça projetos digitais desenvolvidos pela LumixEngine e explore cada experiência diretamente na página.',
+    description: 'Explore jornadas, interfaces e decisões de produto em cases que demonstram a execução técnica da LumixEngine em contexto.',
     path: '/portfolio',
     robots: 'index, follow',
   },

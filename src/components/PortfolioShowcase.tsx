@@ -32,10 +32,10 @@ export function PortfolioShowcase() {
 
         <div className="max-w-xl">
           <h2 id="portfolio-showcase-title" className="text-balance text-3xl font-extrabold leading-tight text-white sm:text-5xl">
-            Veja como transformamos uma operação inteira em produto digital
+            O case é a prova, não apenas a vitrine
           </h2>
           <p className="mt-5 text-base leading-8 text-slate-300 sm:text-lg">
-            O case para cinemas mostra como a LumixEngine conecta a experiência do cliente ao trabalho diário da equipe, sem depender de sistemas isolados.
+            Navegue por jornadas, interfaces e rotinas administrativas em contexto. O projeto para cinemas revela como decisões de produto conectam cliente, equipe e resultado.
           </p>
           <ul className="mt-7 grid gap-3 sm:grid-cols-2">
             {connectedAreas.map((area) => (
@@ -47,7 +47,7 @@ export function PortfolioShowcase() {
           </ul>
           <a
             href={cinemaCasePath}
-            className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-lg bg-emerald-400 px-6 py-3 text-sm font-extrabold text-slate-950 transition hover:-translate-y-0.5 hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#070b13]"
+            className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-lg bg-emerald-400 px-6 py-3 text-sm font-extrabold text-emerald-950 transition hover:-translate-y-0.5 hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#070b13]"
           >
             Explorar o case
             <ArrowRight className="h-4 w-4" aria-hidden="true" />

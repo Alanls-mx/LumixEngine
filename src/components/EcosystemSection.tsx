@@ -111,10 +111,10 @@ export function EcosystemSection() {
       <div className="mx-auto max-w-7xl">
         <div className="mx-auto max-w-4xl text-center">
           <h2 id="ecosystem-title" className="text-[clamp(1.875rem,7vw,3rem)] font-bold tracking-normal text-white md:text-5xl">
-            A tecnologia entra onde a operação precisa de controle
+            A interface mostra como a operação passa a funcionar
           </h2>
           <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-slate-400">
-            Site, loja, sistema interno, agenda, Pix, planilhas e CRM podem trabalhar juntos sem obrigar sua equipe a repetir informação.
+            Explore fluxos simulados de captação, agenda, pagamentos, gestão e vendas. Cada painel demonstra uma decisão de produto, não apenas uma promessa comercial.
           </p>
         </div>
 
@@ -725,7 +725,7 @@ type VisualShellProps = {
 
 function VisualShell({ children }: VisualShellProps) {
   return (
-    <div className="min-w-0 rounded-xl border border-white/5 bg-white/5 p-3 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 min-[360px]:p-4 md:p-8">
+    <div className="min-w-0 rounded-xl bg-white/[0.035] p-3 transition-transform duration-300 hover:-translate-y-1 min-[360px]:p-4 md:p-8">
       {children}
     </div>
   );

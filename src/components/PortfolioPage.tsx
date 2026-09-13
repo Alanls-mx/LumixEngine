@@ -35,14 +35,14 @@ export function PortfolioPage() {
         <div className="relative mx-auto w-full max-w-7xl px-5 pb-14 sm:px-6 sm:pb-20 lg:px-8 lg:pb-24">
           <div className="max-w-4xl">
             <h1 className="max-w-4xl text-balance text-4xl font-extrabold leading-[1.06] text-white sm:text-6xl lg:text-7xl">
-              Produtos digitais construídos para operações reais
+              Produtos digitais que você pode entender por dentro
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200 sm:text-xl">
-              Sites, lojas virtuais, sistemas, automações e integrações desenvolvidos pela LumixEngine para transformar processos em experiências digitais completas.
+              Mais do que listar entregas, mostramos jornadas, interfaces e decisões de produto em funcionamento para tornar nossa capacidade técnica verificável.
             </p>
             <a
               href="#cases"
-              className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-lg bg-emerald-400 px-6 py-3 text-sm font-extrabold text-slate-950 transition hover:-translate-y-0.5 hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#070b13]"
+              className="mt-8 inline-flex min-h-12 items-center gap-2 rounded-lg bg-emerald-400 px-6 py-3 text-sm font-extrabold text-emerald-950 transition hover:-translate-y-0.5 hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#070b13]"
             >
               Ver cases
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -58,7 +58,7 @@ export function PortfolioPage() {
               Soluções que assumem a forma do negócio
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-              Cada projeto começa pelo problema operacional. A tecnologia, a interface e as integrações são definidas depois.
+              Cada projeto começa pelo problema operacional. O case mostra como tecnologia, interface e integrações respondem a esse contexto.
             </p>
           </div>
 
@@ -77,10 +77,10 @@ export function PortfolioPage() {
       <section id="cases" className="scroll-mt-24 mx-auto w-full max-w-7xl px-5 py-20 sm:px-6 lg:px-8 lg:py-28" aria-labelledby="portfolio-cases-title">
         <div className="mb-12 max-w-3xl">
           <h2 id="portfolio-cases-title" className="text-balance text-3xl font-extrabold text-white sm:text-5xl">
-            Cases em destaque
+            Execução documentada em profundidade
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Projetos documentados por dentro, da experiência do público às ferramentas usadas pela operação.
+            Explore o produto da experiência do público às ferramentas da operação, com telas e fluxos apresentados em contexto.
           </p>
         </div>
 

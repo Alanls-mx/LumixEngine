@@ -30,7 +30,7 @@ const encodeMessage = (message: string): string => encodeURIComponent(message);
 
 export const company: CompanyConfig = {
   name: 'LumixEngine',
-  tagline: 'Soluções digitais sob medida para negócios locais',
+  tagline: 'Produtos digitais demonstrados em funcionamento',
   year: 2026,
 };
 
@@ -45,14 +45,14 @@ export const whatsappLinks: Record<WhatsAppLinkKey, string> = {
 };
 
 export const heroContent = {
-  title: 'Tecnologia construída em torno do seu negócio.',
+  title: 'Antes de prometer, mostramos como funciona.',
   subtitle:
-    'Sites, lojas virtuais, sistemas, automações e integrações desenvolvidos de acordo com o que sua operação realmente precisa.',
+    'A própria experiência da LumixEngine demonstra nossa capacidade: simulações interativas, interfaces operacionais e cases que revelam o produto por dentro.',
   primaryCta: 'Solicitar Proposta',
   benefits: [
-    { label: 'Solução sob medida' },
-    { label: 'Sites, sistemas e dados integrados' },
-    { label: 'Estrutura pronta para evoluir' },
+    { label: 'Fluxos que você pode explorar' },
+    { label: 'Interfaces mostradas em contexto' },
+    { label: 'Cases com profundidade de produto' },
   ] satisfies readonly HeroBenefit[],
 };
 
@@ -72,10 +72,10 @@ export const mockChatContent = {
 };
 
 export const servicesContent = {
-  eyebrow: 'Construção digital para a rotina',
-  title: 'Soluções digitais para o que sua operação precisa',
+  eyebrow: 'Capacidade demonstrada na prática',
+  title: 'Da experiência visível à operação por trás dela',
   subtitle:
-    'Do site que capta clientes ao sistema interno que organiza dados, construímos a peça certa para reduzir retrabalho e dar mais controle à equipe.',
+    'Não apresentamos apenas categorias de serviço. Mostramos como experiência, regras de negócio, dados e integrações formam um produto digital coerente.',
   items: [
     {
       title: 'Sites, landing pages e lojas virtuais',

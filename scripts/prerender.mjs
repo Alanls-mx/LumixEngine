@@ -20,7 +20,7 @@ const sharedHeader = `
 const sharedFooter = `
   <footer class="prerender-footer">
     <strong>LumixEngine</strong>
-    <p>Soluções digitais sob medida para operações reais.</p>
+    <p>Produtos digitais demonstrados em funcionamento.</p>
     <nav aria-label="Links institucionais">
       <a href="/politica-de-privacidade">Política de Privacidade</a>
       <a href="/termos-de-uso">Termos de Uso</a>
@@ -31,9 +31,9 @@ const routes = [
   {
     path: '/',
     output: 'index.html',
-    title: 'LumixEngine | Soluções digitais sob medida',
+    title: 'LumixEngine | Produtos digitais demonstrados na prática',
     description:
-      'LumixEngine desenvolve sites, landing pages, lojas virtuais, sistemas web, automações e integrações sob medida para negócios locais.',
+      'Explore simulações interativas, interfaces operacionais e cases que demonstram como a LumixEngine constrói produtos digitais completos.',
     image: '/og-image.png',
     type: 'WebSite',
     content: `
@@ -41,13 +41,13 @@ const routes = [
       <main>
         <section class="prerender-hero">
           <p class="prerender-eyebrow">Projetos digitais para operações reais</p>
-          <h1>Tecnologia construída em torno do seu negócio.</h1>
-          <p>Sites, lojas virtuais, sistemas, automações e integrações desenvolvidos de acordo com o que sua operação realmente precisa.</p>
+          <h1>Antes de prometer, mostramos como funciona.</h1>
+          <p>Simulações interativas, interfaces operacionais e cases revelam a capacidade da LumixEngine na prática.</p>
           <a class="prerender-cta" href="#contato">Solicitar proposta</a>
         </section>
         <section>
-          <p class="prerender-eyebrow">Construção digital para a rotina</p>
-          <h2>Soluções digitais para o que sua operação precisa</h2>
+          <p class="prerender-eyebrow">Capacidade demonstrada na prática</p>
+          <h2>Da experiência visível à operação por trás dela</h2>
           <div class="prerender-grid">
             <article><h3>Sites, landing pages e lojas virtuais</h3><p>Páginas responsivas para apresentar o negócio, captar clientes, organizar catálogos e vender.</p></article>
             <article><h3>Sistemas web sob medida</h3><p>Dashboards, portais, CRMs e painéis desenvolvidos em torno da rotina da equipe.</p></article>
@@ -71,15 +71,15 @@ const routes = [
     output: 'portfolio/index.html',
     title: 'Portfólio | LumixEngine',
     description:
-      'Conheça projetos digitais desenvolvidos pela LumixEngine e explore cada experiência diretamente na página.',
+      'Explore jornadas, interfaces e decisões de produto em cases que demonstram a execução técnica da LumixEngine em contexto.',
     image: '/assets/portfolio/portfolio-hero.webp',
     type: 'CollectionPage',
     content: `
       ${sharedHeader}
       <main>
         <section class="prerender-hero">
-          <h1>Produtos digitais construídos para operações reais</h1>
-          <p>Sites, lojas virtuais, sistemas, automações e integrações desenvolvidos pela LumixEngine para transformar processos em experiências digitais completas.</p>
+          <h1>Produtos digitais que você pode entender por dentro</h1>
+          <p>Jornadas, interfaces e decisões de produto em funcionamento tornam nossa capacidade técnica verificável.</p>
           <a class="prerender-cta" href="#cases">Ver cases</a>
         </section>
         <section>
@@ -92,7 +92,8 @@ const routes = [
           </div>
         </section>
         <section id="cases">
-          <h2>Cases em destaque</h2>
+          <h2>Execução documentada em profundidade</h2>
+          <p>Explore o produto da experiência do público às ferramentas da operação, com telas e fluxos apresentados em contexto.</p>
           <article>
             <h3>Plataforma para cinemas</h3>
             <p>Ecossistema que conecta catálogo, venda, bilheteria, ingressos, bomboniere, clube, campanhas e gestão financeira.</p>
