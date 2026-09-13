@@ -121,3 +121,14 @@ npm run build:frontend
 npm run build:server
 npm run start:server:prod
 ```
+
+## Pré-renderização e SEO
+
+O frontend continua interativo como uma aplicação React, mas o build executa
+`scripts/prerender.mjs` depois do Vite. Esse passo gera HTML semântico e metadados
+específicos para a página inicial, portfólio, case e páginas legais.
+
+As rotas do serviço estático em `render.yaml` apontam cada URL pública para o seu
+HTML pré-renderizado. Assim, mecanismos de busca, compartilhamentos sociais e
+crawlers sem JavaScript recebem título, descrição e conteúdo textual completos;
+depois do carregamento, o React assume a mesma interface normalmente.

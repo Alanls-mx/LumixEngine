@@ -64,7 +64,7 @@ const routeMetadata = {
     robots: 'index, follow',
   },
   cinemaCase: {
-    title: 'Plataforma para cinemas | Portfolio LumixEngine',
+    title: 'Plataforma para cinemas | Portfólio LumixEngine',
     description: 'Case de uma plataforma completa para cinemas, da descoberta de filmes à venda, operação e relacionamento.',
     path: '/portfolio/plataforma-para-cinemas',
     robots: 'index, follow',

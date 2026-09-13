@@ -50,8 +50,35 @@ services:
         sync: false
     routes:
       - type: rewrite
-        source: /*
+        source: /
         destination: /index.html
+      - type: rewrite
+        source: /portfolio/plataforma-para-cinemas
+        destination: /portfolio/plataforma-para-cinemas/index.html
+      - type: rewrite
+        source: /portfolio/plataforma-para-cinemas/
+        destination: /portfolio/plataforma-para-cinemas/index.html
+      - type: rewrite
+        source: /portfolio
+        destination: /portfolio/index.html
+      - type: rewrite
+        source: /portfolio/
+        destination: /portfolio/index.html
+      - type: rewrite
+        source: /politica-de-privacidade
+        destination: /politica-de-privacidade/index.html
+      - type: rewrite
+        source: /politica-de-privacidade/
+        destination: /politica-de-privacidade/index.html
+      - type: rewrite
+        source: /termos-de-uso
+        destination: /termos-de-uso/index.html
+      - type: rewrite
+        source: /termos-de-uso/
+        destination: /termos-de-uso/index.html
+      - type: rewrite
+        source: /*
+        destination: /404.html
     headers:
       - path: /assets/*
         name: Cache-Control
