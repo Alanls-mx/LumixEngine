@@ -103,7 +103,7 @@ export function EcosystemSection() {
             Sistemas completos para operações reais.
           </h2>
           <p className="max-w-2xl text-base leading-7 text-slate-300 lg:justify-self-end lg:text-lg lg:leading-8">
-            Cinco exemplos de como dados, atendimento e decisões podem circular dentro de um produto construído para o seu negócio.
+            Do primeiro contato à operação, construímos o sistema ao redor do seu negócio.
           </p>
         </div>
 
@@ -126,7 +126,7 @@ export function EcosystemSection() {
                 inert={isActive ? undefined : true}
                 key={tab.id}
               >
-                <div className="flex min-w-0 flex-col border-b border-slate-800 pb-7 lg:justify-between lg:border-b-0 lg:border-r lg:pb-0 lg:pr-8">
+                <div className="flex min-w-0 flex-col self-start border-b border-slate-800 pb-7 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-8 lg:pt-2">
                   <div>
                     <div className="flex items-center gap-3 text-sm font-bold text-emerald-300">
                       <tab.icon className="h-5 w-5" aria-hidden="true" />
@@ -138,8 +138,8 @@ export function EcosystemSection() {
                     <p className="mt-4 text-base leading-7 text-slate-400">{tab.description}</p>
                   </div>
 
-                  <div className="mt-8 border-t border-slate-800 pt-5">
-                    <p className="text-xs font-bold uppercase text-slate-500">Módulos conectados</p>
+                  <div className="mt-7 border-t border-slate-800 pt-5">
+                    <p className="text-xs font-bold uppercase text-slate-400">Módulos conectados</p>
                     <ol className="mt-4 space-y-3">
                       {tab.connections.map((connection, connectionIndex) => (
                         <li className="flex items-center gap-3 text-sm font-semibold text-slate-200" key={connection}>
@@ -178,7 +178,7 @@ export function EcosystemSection() {
                   onClick={() => setActiveIndex(index)}
                   key={tab.id}
                 >
-                  <tab.icon className={`h-4 w-4 ${isActive ? 'text-emerald-300' : 'text-slate-500'}`} aria-hidden="true" />
+                  <tab.icon className={`h-4 w-4 ${isActive ? 'text-emerald-300' : 'text-slate-400'}`} aria-hidden="true" />
                   {tab.label}
                 </button>
               );
@@ -186,7 +186,7 @@ export function EcosystemSection() {
           </div>
 
           <div className="flex items-center justify-between gap-4 sm:justify-end">
-            <span className="text-sm font-semibold tabular-nums text-slate-500">
+            <span className="text-sm font-semibold tabular-nums text-slate-400">
               {String(activeIndex + 1).padStart(2, '0')} / {String(ecosystemTabs.length).padStart(2, '0')}
             </span>
             <div className="flex gap-2">
@@ -200,7 +200,7 @@ export function EcosystemSection() {
           </div>
         </div>
 
-        <div className="mt-6 flex items-center gap-3 text-sm text-slate-500">
+        <div className="mt-6 flex items-center gap-3 text-sm text-slate-400">
           <Workflow className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
           <span>Os dados exibidos são ilustrativos e representam fluxos que podem ser desenvolvidos sob medida.</span>
         </div>
