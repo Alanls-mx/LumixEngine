@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   BarChart3,
   CalendarDays,
@@ -76,20 +76,38 @@ const autoplayIntervalMs = 14000;
 
 export function EcosystemSection() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isSectionVisible, setIsSectionVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsSectionVisible(entry.isIntersecting),
+      { threshold: 0.12 },
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isSectionVisible) return;
+
     const intervalId = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % ecosystemTabs.length);
     }, autoplayIntervalMs);
 
     return () => window.clearInterval(intervalId);
-  }, []);
+  }, [activeIndex, isSectionVisible]);
 
   const showPrevious = () => setActiveIndex((current) => (current - 1 + ecosystemTabs.length) % ecosystemTabs.length);
   const showNext = () => setActiveIndex((current) => (current + 1) % ecosystemTabs.length);
 
   return (
     <section
+      ref={sectionRef}
       id="ecossistema"
       className="scroll-mt-24 overflow-hidden bg-night px-3 py-14 min-[360px]:px-5 md:px-8 md:py-20"
       aria-labelledby="ecosystem-title"
@@ -153,7 +171,7 @@ export function EcosystemSection() {
                   </div>
                 </div>
 
-                <EcosystemVisual type={tab.visual} isActive={isActive} />
+                <EcosystemVisual type={tab.visual} isActive={isActive && isSectionVisible} />
               </article>
             );
           })}
