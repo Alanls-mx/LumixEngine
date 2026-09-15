@@ -6,10 +6,12 @@ import {
   Mail,
   MessageCircle,
   Plus,
+  QrCode,
   Save,
   Send,
   ShieldCheck,
   Trash2,
+  X,
   Zap,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -51,6 +53,10 @@ export function SettingsPage() {
   const queryClient = useQueryClient()
   const [formState, setFormState] = useState<SettingsPayload>(defaultFormState)
   const [testEmail, setTestEmail] = useState('')
+  const [qrModalData, setQrModalData] = useState<{
+    base64?: string | null
+    pairingCode?: string | null
+  } | null>(null)
 
   const settingsQuery = useQuery({
     queryKey: settingsKey,
@@ -96,10 +102,35 @@ export function SettingsPage() {
     },
   })
 
+  const connectWhatsApp = useMutation({
+    mutationFn: settingsApi.connectWhatsApp,
+    onSuccess: (response) => {
+      if (response.base64 || response.pairingCode) {
+        setQrModalData({
+          base64: response.base64,
+          pairingCode: response.pairingCode,
+        })
+        toast.info('QR Code gerado! Aponte o WhatsApp para conectar.')
+      } else {
+        toast.info(response.message)
+      }
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Não foi possível gerar QR Code'))
+    },
+  })
+
   const verifyWhatsApp = useMutation({
     mutationFn: settingsApi.verifyWhatsApp,
     onSuccess: (response) => {
-      toast.success(response.message)
+      if (response.ok) {
+        toast.success(response.message)
+      } else {
+        toast.warning(response.message)
+        if (response.state === 'close' || response.state === 'connecting') {
+          connectWhatsApp.mutate()
+        }
+      }
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Falha ao verificar Evolution API'))
@@ -236,6 +267,17 @@ export function SettingsPage() {
                 }
                 placeholder="Chave global da Evolution API"
               />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                onClick={() => connectWhatsApp.mutate()}
+                disabled={connectWhatsApp.isPending}
+              >
+                <QrCode className="size-4 mr-2" aria-hidden="true" />
+                {connectWhatsApp.isPending ? 'Carregando QR Code...' : 'Escanear QR Code para conectar'}
+              </Button>
             </div>
           </SettingsCard>
         </div>
@@ -244,7 +286,7 @@ export function SettingsPage() {
           <SettingsCard
             icon={Zap}
             title="Ações"
-            description="Salve, verifique SMTP e envie uma mensagem de teste."
+            description="Salve, verifique conexões e escaneie o QR Code."
           >
             <div className="space-y-3">
               <Button type="submit" className="w-full" disabled={updateSettings.isPending}>
@@ -270,6 +312,15 @@ export function SettingsPage() {
               >
                 <MessageCircle aria-hidden="true" />
                 {verifyWhatsApp.isPending ? 'Verificando WhatsApp...' : 'Verificar WhatsApp'}
+              </Button>
+              <Button
+                type="button"
+                className="w-full bg-[#00a884] text-white hover:bg-[#008f6f]"
+                onClick={() => connectWhatsApp.mutate()}
+                disabled={connectWhatsApp.isPending}
+              >
+                <QrCode aria-hidden="true" />
+                {connectWhatsApp.isPending ? 'Carregando QR Code...' : 'Escanear QR Code WhatsApp'}
               </Button>
             </div>
           </SettingsCard>
@@ -302,6 +353,81 @@ export function SettingsPage() {
       </form>
 
       <MessageTemplatesPanel />
+
+      {qrModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl text-center">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                <MessageCircle className="size-5 text-[#00a884]" />
+                Conectar WhatsApp
+              </h3>
+              <button
+                type="button"
+                onClick={() => setQrModalData(null)}
+                className="text-slate-400 hover:text-slate-700"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {qrModalData.base64 ? (
+              <div className="mx-auto mb-4 p-3 bg-slate-50 rounded-xl border border-slate-200 inline-block shadow-inner">
+                <img
+                  src={qrModalData.base64}
+                  alt="QR Code do WhatsApp"
+                  className="size-64 object-contain rounded-lg"
+                />
+              </div>
+            ) : (
+              <div className="p-8 text-sm text-slate-500">
+                Aguardando QR Code da Evolution API...
+              </div>
+            )}
+
+            {qrModalData.pairingCode && (
+              <div className="mb-4 rounded-lg bg-emerald-50 p-2 text-xs font-mono text-emerald-800">
+                Código de pareamento: <span className="font-bold">{qrModalData.pairingCode}</span>
+              </div>
+            )}
+
+            <p className="text-xs text-slate-600 leading-relaxed mb-5">
+              1. Abra o WhatsApp no seu celular<br />
+              2. Toque em <strong>Menu (ou Configurações) &gt; Aparelhos conectados</strong><br />
+              3. Toque em <strong>Conectar um aparelho</strong> e aponte a câmera
+            </p>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => connectWhatsApp.mutate()}
+                disabled={connectWhatsApp.isPending}
+              >
+                {connectWhatsApp.isPending ? 'Atualizando...' : 'Atualizar QR Code'}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-[#00a884] text-white hover:bg-[#008f6f]"
+                onClick={() => {
+                  verifyWhatsApp.mutate(undefined, {
+                    onSuccess: (res) => {
+                      if (res.ok && res.state === 'open') {
+                        setQrModalData(null)
+                      }
+                    },
+                  })
+                }}
+                disabled={verifyWhatsApp.isPending}
+              >
+                {verifyWhatsApp.isPending ? 'Verificando...' : 'Já escaneei'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

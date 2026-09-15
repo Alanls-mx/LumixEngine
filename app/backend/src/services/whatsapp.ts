@@ -267,6 +267,90 @@ export async function verifyWhatsAppConnection(
   }
 }
 
+export async function getWhatsAppConnectQrCode(
+  settings: WhatsAppSettings = {},
+  logger?: {
+    warn: (payload: unknown, message?: string) => void;
+    error: (payload: unknown, message?: string) => void;
+  },
+): Promise<{
+  ok: boolean;
+  base64?: string | null;
+  pairingCode?: string | null;
+  code?: string | null;
+  message: string;
+}> {
+  const apiUrl = (
+    settings.WHATSAPP_API_URL ?? process.env.WHATSAPP_API_URL ?? ""
+  ).trim();
+  const apiToken = (
+    settings.WHATSAPP_API_TOKEN ?? process.env.WHATSAPP_API_TOKEN ?? ""
+  ).trim();
+
+  if (!apiUrl || !apiToken) {
+    return {
+      ok: false,
+      message: "URL de envio ou Token da Evolution API não configurados.",
+    };
+  }
+
+  try {
+    const cleanUrl = apiUrl.replace(/\/+$/, "");
+    const match = cleanUrl.match(/(?:message\/sendText|sendText)\/([^/?#]+)/i);
+    const instanceName = (match && match[1]) ? match[1] : "lumixengine";
+    const baseUrl = match
+      ? cleanUrl.slice(0, match.index).replace(/\/+$/, "")
+      : cleanUrl.replace(/\/(?:message|instance).*$/i, "").replace(/\/+$/, "");
+
+    const headers = {
+      "Content-Type": "application/json",
+      apikey: apiToken,
+      Authorization: `Bearer ${apiToken}`,
+    };
+
+    const res = await fetch(
+      `${baseUrl}/instance/connect/${encodeURIComponent(instanceName)}`,
+      {
+        method: "GET",
+        headers,
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        message: `Evolution API retornou status HTTP ${res.status} ao solicitar conexão.`,
+      };
+    }
+
+    const data = (await res.json().catch(() => ({}))) as Record<string, any>;
+    let base64 = data.base64 ?? data.qrcode?.base64 ?? null;
+    const pairingCode = data.pairingCode ?? null;
+    const code = data.code ?? data.qrcode?.code ?? null;
+
+    if (base64 && !base64.startsWith("data:image")) {
+      base64 = `data:image/png;base64,${base64}`;
+    }
+
+    return {
+      ok: true,
+      base64,
+      pairingCode,
+      code,
+      message: base64
+        ? "QR Code gerado com sucesso."
+        : "Instância solicitada para conexão.",
+    };
+  } catch (error) {
+    logger?.error({ error }, "Erro ao obter QR Code da Evolution API");
+    return {
+      ok: false,
+      message: "Não foi possível carregar o QR Code da Evolution API.",
+    };
+  }
+}
+
 function classifyEvolutionError(status: number, payload: unknown) {
   const serialized =
     typeof payload === "string" ? payload : JSON.stringify(payload ?? {});

@@ -33,6 +33,7 @@ import {
   type MailSettings,
 } from "./services/mail.js";
 import {
+  getWhatsAppConnectQrCode,
   getWhatsAppStatus,
   normalizePhone,
   sendWhatsAppMessage,
@@ -1165,6 +1166,27 @@ app.post("/api/settings/whatsapp/verify", async (_request, reply) => {
       ok: false,
       state: "error",
       message: "Falha ao verificar conexão com a Evolution API.",
+    });
+  }
+});
+
+app.post("/api/settings/whatsapp/connect", async (_request, reply) => {
+  const whatsappSettings = await getWhatsAppSettings();
+
+  try {
+    const result = await getWhatsAppConnectQrCode(whatsappSettings, app.log);
+
+    if (!result.ok) {
+      return reply.status(400).send(result);
+    }
+
+    return result;
+  } catch (error) {
+    app.log.error({ error }, "Erro ao obter QR Code da Evolution API");
+
+    return reply.status(400).send({
+      ok: false,
+      message: "Falha ao solicitar conexão com a Evolution API.",
     });
   }
 });

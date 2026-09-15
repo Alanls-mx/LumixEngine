@@ -212,6 +212,17 @@ export const settingsApi = {
       method: 'POST',
     }),
 
+  connectWhatsApp: () =>
+    apiRequest<{
+      ok: boolean
+      base64?: string | null
+      pairingCode?: string | null
+      code?: string | null
+      message: string
+    }>('/settings/whatsapp/connect', {
+      method: 'POST',
+    }),
+
   sendTestEmail: (to: string) =>
     apiRequest<{ ok: boolean; message: string }>('/settings/email/test', {
       method: 'POST',
