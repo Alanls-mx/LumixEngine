@@ -36,6 +36,7 @@ import {
   getWhatsAppStatus,
   normalizePhone,
   sendWhatsAppMessage,
+  verifyWhatsAppConnection,
   type WhatsAppSettings,
 } from "./services/whatsapp.js";
 
@@ -1142,6 +1143,28 @@ app.post("/api/settings/email/verify", async (_request, reply) => {
     return reply.status(400).send({
       ok: false,
       message: getSmtpErrorMessage(error),
+    });
+  }
+});
+
+app.post("/api/settings/whatsapp/verify", async (_request, reply) => {
+  const whatsappSettings = await getWhatsAppSettings();
+
+  try {
+    const result = await verifyWhatsAppConnection(whatsappSettings, app.log);
+
+    if (!result.ok) {
+      return reply.status(400).send(result);
+    }
+
+    return result;
+  } catch (error) {
+    app.log.error({ error }, "Erro ao verificar conexão da Evolution API");
+
+    return reply.status(400).send({
+      ok: false,
+      state: "error",
+      message: "Falha ao verificar conexão com a Evolution API.",
     });
   }
 });

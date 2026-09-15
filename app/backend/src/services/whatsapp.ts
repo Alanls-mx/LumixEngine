@@ -59,6 +59,214 @@ export function getWhatsAppStatus(settings: WhatsAppSettings = {}) {
   };
 }
 
+export async function verifyWhatsAppConnection(
+  settings: WhatsAppSettings = {},
+  logger?: {
+    warn: (payload: unknown, message?: string) => void;
+    error: (payload: unknown, message?: string) => void;
+  },
+): Promise<{
+  ok: boolean;
+  state: "open" | "connecting" | "close" | "unconfigured" | "error";
+  message: string;
+  details?: unknown;
+}> {
+  const apiUrl = (
+    settings.WHATSAPP_API_URL ?? process.env.WHATSAPP_API_URL ?? ""
+  ).trim();
+  const apiToken = (
+    settings.WHATSAPP_API_TOKEN ?? process.env.WHATSAPP_API_TOKEN ?? ""
+  ).trim();
+
+  if (!apiUrl || !apiToken) {
+    return {
+      ok: false,
+      state: "unconfigured",
+      message:
+        "URL de envio ou Token / API Key da Evolution API não estão configurados.",
+    };
+  }
+
+  try {
+    const cleanUrl = apiUrl.replace(/\/+$/, "");
+    const match = cleanUrl.match(/(?:message\/sendText|sendText)\/([^/?#]+)/i);
+    const instanceName = match ? match[1] : null;
+    const baseUrl = match
+      ? cleanUrl.slice(0, match.index).replace(/\/+$/, "")
+      : cleanUrl.replace(/\/(?:message|instance).*$/i, "").replace(/\/+$/, "");
+
+    const headers = {
+      "Content-Type": "application/json",
+      apikey: apiToken,
+      Authorization: `Bearer ${apiToken}`,
+    };
+
+    // 1. Se identificou o nome da instância, tenta consultar o connectionState
+    if (instanceName && baseUrl) {
+      try {
+        const stateRes = await fetch(
+          `${baseUrl}/instance/connectionState/${encodeURIComponent(instanceName)}`,
+          {
+            method: "GET",
+            headers,
+            signal: AbortSignal.timeout(8000),
+          },
+        );
+
+        if (stateRes.ok) {
+          const data = (await stateRes.json().catch(() => ({}))) as Record<
+            string,
+            any
+          >;
+          const state = (
+            data?.instance?.state ??
+            data?.state ??
+            ""
+          ).toLowerCase();
+
+          if (state === "open") {
+            return {
+              ok: true,
+              state: "open",
+              message: `Evolution API conectada e funcional! A instância "${instanceName}" está online e autenticada no WhatsApp.`,
+              details: data,
+            };
+          }
+
+          return {
+            ok: false,
+            state: state === "connecting" ? "connecting" : "close",
+            message: `A Evolution API está acessível, mas a instância "${instanceName}" está com status "${state || "desconectada"}". É necessário escanear o QR Code no WhatsApp.`,
+            details: data,
+          };
+        }
+
+        if (stateRes.status === 401 || stateRes.status === 403) {
+          return {
+            ok: false,
+            state: "error",
+            message:
+              "Falha de autenticação na Evolution API: API Key / Token inválido.",
+          };
+        }
+      } catch (err) {
+        logger?.warn(
+          { err },
+          "Tentativa de checar connectionState falhou, tentando fallback",
+        );
+      }
+    }
+
+    // 2. Fallback: consulta lista de instâncias (/instance/fetchInstances)
+    if (baseUrl) {
+      try {
+        const instancesRes = await fetch(`${baseUrl}/instance/fetchInstances`, {
+          method: "GET",
+          headers,
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (instancesRes.ok) {
+          const list = (await instancesRes
+            .json()
+            .catch(() => [])) as Array<Record<string, any>>;
+          if (Array.isArray(list)) {
+            const target = instanceName
+              ? list.find(
+                  (item) =>
+                    (item.name ??
+                      item.instance?.instanceName ??
+                      item.instanceName ??
+                      "") === instanceName,
+                )
+              : list[0];
+
+            if (target) {
+              const state = (
+                target.connectionStatus ??
+                target.instance?.state ??
+                target.state ??
+                ""
+              ).toLowerCase();
+              const name =
+                target.name ??
+                target.instance?.instanceName ??
+                instanceName ??
+                "padrão";
+
+              if (state === "open") {
+                return {
+                  ok: true,
+                  state: "open",
+                  message: `Evolution API conectada e funcional! Instância "${name}" está online e autenticada no WhatsApp.`,
+                  details: target,
+                };
+              }
+
+              return {
+                ok: false,
+                state: state === "connecting" ? "connecting" : "close",
+                message: `Instância "${name}" encontrada na Evolution API, mas está com status "${state || "desconectada"}".`,
+                details: target,
+              };
+            }
+          }
+        }
+
+        if (instancesRes.status === 401 || instancesRes.status === 403) {
+          return {
+            ok: false,
+            state: "error",
+            message:
+              "Falha de autenticação na Evolution API: API Key / Token inválido.",
+          };
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 3. Fallback: testa o endpoint configurado
+    const probeRes = await fetch(cleanUrl, {
+      method: "GET",
+      headers,
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (probeRes.status === 401 || probeRes.status === 403) {
+      return {
+        ok: false,
+        state: "error",
+        message:
+          "Falha de autenticação na Evolution API: API Key / Token inválido.",
+      };
+    }
+
+    if (probeRes.ok || probeRes.status === 405) {
+      return {
+        ok: true,
+        state: "open",
+        message:
+          "Servidor da Evolution API respondendo e autenticado com sucesso!",
+      };
+    }
+
+    return {
+      ok: false,
+      state: "error",
+      message: `Evolution API retornou status HTTP ${probeRes.status}. Verifique o endpoint configurado.`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      state: "error",
+      message:
+        "Não foi possível conectar à Evolution API (verifique se a URL está correta e o servidor ativo).",
+      details: String(error),
+    };
+  }
+}
+
 function classifyEvolutionError(status: number, payload: unknown) {
   const serialized =
     typeof payload === "string" ? payload : JSON.stringify(payload ?? {});

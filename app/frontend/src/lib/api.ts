@@ -202,6 +202,16 @@ export const settingsApi = {
       method: 'POST',
     }),
 
+  verifyWhatsApp: () =>
+    apiRequest<{
+      ok: boolean
+      state: string
+      message: string
+      details?: unknown
+    }>('/settings/whatsapp/verify', {
+      method: 'POST',
+    }),
+
   sendTestEmail: (to: string) =>
     apiRequest<{ ok: boolean; message: string }>('/settings/email/test', {
       method: 'POST',

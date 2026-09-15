@@ -96,6 +96,16 @@ export function SettingsPage() {
     },
   })
 
+  const verifyWhatsApp = useMutation({
+    mutationFn: settingsApi.verifyWhatsApp,
+    onSuccess: (response) => {
+      toast.success(response.message)
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Falha ao verificar Evolution API'))
+    },
+  })
+
   const sendTestEmail = useMutation({
     mutationFn: settingsApi.sendTestEmail,
     onSuccess: (response) => {
@@ -250,6 +260,16 @@ export function SettingsPage() {
               >
                 <ShieldCheck aria-hidden="true" />
                 Verificar SMTP
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => verifyWhatsApp.mutate()}
+                disabled={verifyWhatsApp.isPending}
+              >
+                <MessageCircle aria-hidden="true" />
+                {verifyWhatsApp.isPending ? 'Verificando WhatsApp...' : 'Verificar WhatsApp'}
               </Button>
             </div>
           </SettingsCard>
