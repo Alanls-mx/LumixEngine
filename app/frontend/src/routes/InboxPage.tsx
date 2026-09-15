@@ -14,7 +14,9 @@ import {
   CheckCheck,
   ChevronDown,
   Copy,
+  Download,
   FileText,
+  Image as ImageIcon,
   MessageCircle,
   MessageSquare,
   Mic,
@@ -24,7 +26,9 @@ import {
   Send,
   Smile,
   Sparkles,
+  User,
   UserRound,
+  Video,
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -36,8 +40,12 @@ import { leadsApi, messageTemplatesApi, messagesApi, usersApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { queryKeys } from '@/lib/queryClient'
 import type { Lead, Message, MessageSuggestion } from '@/types/lead'
-
-const emojiList = ['👍', '❤️', '😂', '😮', '😢', '🙏', '👏', '🚀', '✅', '🔥', '👋', '🤝']
+import { WhatsAppEmojiPicker } from '@/components/chat/WhatsAppEmojiPicker'
+import {
+  WhatsAppAttachMenu,
+  type SelectedAttachment,
+} from '@/components/chat/WhatsAppAttachMenu'
+import { WhatsAppMediaPreviewModal } from '@/components/chat/WhatsAppMediaPreviewModal'
 
 type ReplyingMessage = {
   id: string
@@ -63,6 +71,55 @@ function parseQuotedMessage(text: string) {
   }
 }
 
+function parseMediaMessage(text: string) {
+  const imageMatch = text.match(/^\[Imagem(?::\s*([^\]]+))?\](?:\n+([\s\S]*))?$/i)
+  if (imageMatch) {
+    return {
+      type: 'image' as const,
+      fileName: imageMatch[1]?.trim() || 'Foto',
+      caption: imageMatch[2]?.trim() || '',
+    }
+  }
+
+  const videoMatch = text.match(/^\[Vídeo(?::\s*([^\]]+))?\](?:\n+([\s\S]*))?$/i)
+  if (videoMatch) {
+    return {
+      type: 'video' as const,
+      fileName: videoMatch[1]?.trim() || 'Vídeo',
+      caption: videoMatch[2]?.trim() || '',
+    }
+  }
+
+  const docMatch = text.match(/^\[Documento(?::\s*([^\]]+))?\](?:\n+([\s\S]*))?$/i)
+  if (docMatch) {
+    return {
+      type: 'document' as const,
+      fileName: docMatch[1]?.trim() || 'Documento',
+      caption: docMatch[2]?.trim() || '',
+    }
+  }
+
+  const audioMatch = text.match(/^\[Áudio\](?:\n+([\s\S]*))?$/i)
+  if (audioMatch) {
+    return {
+      type: 'audio' as const,
+      fileName: 'Mensagem de voz',
+      caption: audioMatch[1]?.trim() || '',
+    }
+  }
+
+  const contactMatch = text.match(/^\[Contato(?::\s*([^\]]+))?\](?:\n+([\s\S]*))?$/i)
+  if (contactMatch) {
+    return {
+      type: 'contact' as const,
+      fileName: contactMatch[1]?.trim() || 'Contato',
+      caption: contactMatch[2]?.trim() || '',
+    }
+  }
+
+  return null
+}
+
 export function InboxPage() {
   useLeadRealtime()
 
@@ -74,6 +131,7 @@ export function InboxPage() {
   const [replyingTo, setReplyingTo] = useState<ReplyingMessage | null>(null)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showActionsMenu, setShowActionsMenu] = useState(false)
+  const [selectedAttachment, setSelectedAttachment] = useState<SelectedAttachment | null>(null)
   const [showAiModal, setShowAiModal] = useState(false)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [suggestions, setSuggestions] = useState<MessageSuggestion[]>([])
@@ -296,6 +354,63 @@ export function InboxPage() {
     navigator.clipboard.writeText(parsed.body)
     toast.success('Mensagem copiada!')
     setActiveMenuMessageId(null)
+  }
+
+  const handleInsertEmoji = (emoji: string) => {
+    if (textareaRef.current) {
+      const start = textareaRef.current.selectionStart || 0
+      const end = textareaRef.current.selectionEnd || 0
+      const text = messageText
+      const newText = text.substring(0, start) + emoji + text.substring(end)
+      setMessageText(newText)
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus()
+          textareaRef.current.setSelectionRange(start + emoji.length, start + emoji.length)
+        }
+      }, 0)
+    } else {
+      setMessageText((prev) => prev + emoji)
+    }
+  }
+
+  const handleSendAttachment = (att: SelectedAttachment, caption: string) => {
+    if (!selectedLead) return
+
+    let finalContent = ''
+    if (att.type === 'image') {
+      finalContent = `[Imagem: ${att.name}]${caption ? `\n${caption}` : ''}`
+    } else if (att.type === 'video') {
+      finalContent = `[Vídeo: ${att.name}]${caption ? `\n${caption}` : ''}`
+    } else {
+      finalContent = `[Documento: ${att.name} (${att.sizeFormatted})]${caption ? `\n${caption}` : ''}`
+    }
+
+    if (replyingTo) {
+      const cleanSnippet = replyingTo.content.replace(/[\r\n]+/g, ' ').slice(0, 100)
+      finalContent = `> ${replyingTo.senderName}: "${cleanSnippet}"\n\n${finalContent}`
+    }
+
+    sendMessage.mutate(
+      {
+        lead_id: selectedLead.id,
+        conteudo: finalContent,
+        client_request_id: crypto.randomUUID(),
+        reply_to_message_id: replyingTo?.id,
+        ...(selectedLead.assigned_to_id
+          ? {
+              user_id: selectedLead.assigned_to_id,
+            }
+          : {}),
+        channels: ['WHATSAPP'],
+      },
+      {
+        onSuccess: () => {
+          setSelectedAttachment(null)
+          setReplyingTo(null)
+        },
+      },
+    )
   }
 
   return (
@@ -526,7 +641,11 @@ export function InboxPage() {
                   backgroundSize: '28px 28px',
                   backgroundPosition: '0 0, 14px 14px',
                 }}
-                onClick={() => setActiveMenuMessageId(null)}
+                onClick={() => {
+                  setActiveMenuMessageId(null)
+                  setShowEmojiPicker(false)
+                  setShowActionsMenu(false)
+                }}
               >
                 {/* Date separator */}
                 <div className="my-3 flex justify-center">
@@ -641,10 +760,84 @@ export function InboxPage() {
                               </div>
                             )}
 
-                            {/* Message Text Content */}
-                            <p className="whitespace-pre-wrap text-[14px] leading-[19px] break-words">
-                              {parsed.body}
-                            </p>
+                            {/* Message Content: Media Card or Text */}
+                            {(() => {
+                              const media = parseMediaMessage(parsed.body)
+                              if (!media) {
+                                return (
+                                  <p className="whitespace-pre-wrap text-[14px] leading-[19px] break-words">
+                                    {parsed.body}
+                                  </p>
+                                )
+                              }
+
+                              return (
+                                <div className="space-y-1.5">
+                                  {media.type === 'document' && (
+                                    <div className="flex items-center gap-3 rounded-lg bg-black/5 p-2.5">
+                                      <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#7f66ff] text-white">
+                                        <FileText className="size-5" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="truncate text-xs font-semibold text-[#111b21]">
+                                          {media.fileName}
+                                        </p>
+                                        <p className="text-[10px] text-[#667781]">Documento</p>
+                                      </div>
+                                      <span className="grid size-7 place-items-center rounded-full bg-white/80 text-[#54656f] shadow-xs">
+                                        <Download className="size-3.5" />
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {media.type === 'image' && (
+                                    <div className="flex items-center gap-2 rounded-lg bg-black/5 p-2 text-xs text-[#54656f]">
+                                      <ImageIcon className="size-4 text-[#007bfc]" />
+                                      <span className="truncate font-medium">{media.fileName}</span>
+                                    </div>
+                                  )}
+
+                                  {media.type === 'video' && (
+                                    <div className="flex items-center gap-2 rounded-lg bg-black/5 p-2 text-xs text-[#54656f]">
+                                      <Video className="size-4 text-[#007bfc]" />
+                                      <span className="truncate font-medium">{media.fileName}</span>
+                                    </div>
+                                  )}
+
+                                  {media.type === 'audio' && (
+                                    <div className="flex items-center gap-3 rounded-lg bg-black/5 p-2 min-w-[200px]">
+                                      <div className="grid size-8 shrink-0 place-items-center rounded-full bg-[#00a884] text-white">
+                                        <Mic className="size-4" />
+                                      </div>
+                                      <div className="flex-1 space-y-1">
+                                        <div className="h-1.5 w-full rounded-full bg-slate-300" />
+                                        <span className="text-[10px] text-[#667781]">Mensagem de voz</span>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {media.type === 'contact' && (
+                                    <div className="flex items-center gap-3 rounded-lg bg-black/5 p-2.5">
+                                      <div className="grid size-9 shrink-0 place-items-center rounded-full bg-[#02a698] text-white">
+                                        <User className="size-4" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="truncate text-xs font-semibold text-[#111b21]">
+                                          {media.fileName}
+                                        </p>
+                                        <p className="text-[10px] text-[#667781]">Contato</p>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {media.caption && (
+                                    <p className="whitespace-pre-wrap text-[14px] leading-[19px] break-words">
+                                      {media.caption}
+                                    </p>
+                                  )}
+                                </div>
+                              )
+                            })()}
 
                             {/* Timestamp & Delivery Status */}
                             <div className="float-right ml-3 mt-1 flex items-center gap-1 text-[11px] text-[#667781]">
@@ -704,31 +897,16 @@ export function InboxPage() {
                 </div>
               )}
 
-              {/* Emoji Tray */}
+              {/* WhatsApp Web Emoji Picker Popover */}
               {showEmojiPicker && (
-                <div className="flex flex-wrap items-center gap-1 border-t border-[#d1d7db] bg-[#f0f2f5] px-4 py-2">
-                  {emojiList.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => setMessageText((prev) => prev + emoji)}
-                      className="grid size-8 place-items-center rounded-lg text-lg hover:bg-[#e9edef]"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setShowEmojiPicker(false)}
-                    className="ml-auto text-xs text-[#54656f] hover:underline"
-                  >
-                    Fechar
-                  </button>
-                </div>
+                <WhatsAppEmojiPicker
+                  onSelect={handleInsertEmoji}
+                  onClose={() => setShowEmojiPicker(false)}
+                />
               )}
 
               {/* WhatsApp Web Bottom Input Bar */}
-              <footer className="border-t border-[#d1d7db] bg-[#f0f2f5] px-4 py-2.5">
+              <footer className="border-t border-[#d1d7db] bg-[#f0f2f5] px-4 py-2.5 relative">
                 <form
                   onSubmit={handleSendMessage}
                   className="flex items-end gap-2"
@@ -736,57 +914,61 @@ export function InboxPage() {
                   {/* Emoji Button */}
                   <button
                     type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="grid size-10 shrink-0 place-items-center rounded-full text-[#54656f] transition hover:bg-[#e9edef] hover:text-[#111b21]"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowEmojiPicker(!showEmojiPicker)
+                      setShowActionsMenu(false)
+                    }}
+                    className={cn(
+                      'grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-[#e9edef]',
+                      showEmojiPicker
+                        ? 'text-[#00a884] bg-[#00a884]/10'
+                        : 'text-[#54656f] hover:text-[#111b21]',
+                    )}
                     title="Emojis"
                   >
                     <Smile className="size-6" />
                   </button>
 
-                  {/* Attachment Button (Templates / AI) */}
+                  {/* Attachment Button (WhatsApp Web Vertical Menu) */}
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={() => setShowActionsMenu(!showActionsMenu)}
-                      className="grid size-10 shrink-0 place-items-center rounded-full text-[#54656f] transition hover:bg-[#e9edef] hover:text-[#111b21]"
-                      title="Anexar ou Ações Rápidas"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowActionsMenu(!showActionsMenu)
+                        setShowEmojiPicker(false)
+                      }}
+                      className={cn(
+                        'grid size-10 shrink-0 place-items-center rounded-full transition hover:bg-[#e9edef]',
+                        showActionsMenu
+                          ? 'text-[#00a884] bg-[#00a884]/10 rotate-45'
+                          : 'text-[#54656f] hover:text-[#111b21]',
+                      )}
+                      title="Anexar"
                     >
-                      <Paperclip className="size-5" />
+                      <Paperclip className="size-5 transition-transform duration-200" />
                     </button>
 
-                    {showActionsMenu && (
-                      <div
-                        className="absolute bottom-12 left-0 z-30 min-w-[190px] rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowTemplatesModal(true)
-                            setShowActionsMenu(false)
-                          }}
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#111b21] hover:bg-[#f0f2f5]"
-                        >
-                          <FileText className="size-4 text-[#00a884]" />
-                          <span>Templates de resposta</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowAiModal(true)
-                            setShowActionsMenu(false)
-                          }}
-                          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-[#111b21] hover:bg-[#f0f2f5]"
-                        >
-                          <Sparkles className="size-4 text-[#027eb5]" />
-                          <span>Sugestão de resposta IA</span>
-                        </button>
-                      </div>
-                    )}
+                    <WhatsAppAttachMenu
+                      isOpen={showActionsMenu}
+                      onClose={() => setShowActionsMenu(false)}
+                      onAttachmentSelected={(att) => setSelectedAttachment(att)}
+                      onOpenTemplates={() => setShowTemplatesModal(true)}
+                      onOpenAiSuggestions={() => setShowAiModal(true)}
+                      onShareContact={() => {
+                        if (selectedLead) {
+                          const contactText = `[Contato: ${selectedLead.nome}]\nTelefone: ${selectedLead.telefone ?? 'Não informado'}`
+                          setMessageText((prev) =>
+                            prev ? `${prev}\n${contactText}` : contactText,
+                          )
+                        }
+                      }}
+                    />
                   </div>
 
                   {/* Textarea Input (Auto-sized, WhatsApp Web style) */}
-                  <div className="flex-1 rounded-lg bg-white px-3 py-2 shadow-sm focus-within:ring-1 focus-within:ring-[#00a884]">
+                  <div className="flex-1 rounded-lg bg-white px-3 py-2 shadow-xs focus-within:ring-1 focus-within:ring-[#00a884]">
                     <textarea
                       ref={textareaRef}
                       value={messageText}
@@ -815,7 +997,7 @@ export function InboxPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => toast.info('Digite uma mensagem para enviar.')}
+                      onClick={() => toast.info('Digite uma mensagem ou anexe um arquivo para enviar.')}
                       className="grid size-10 shrink-0 place-items-center rounded-full text-[#54656f] transition hover:bg-[#e9edef]"
                       title="Gravar áudio"
                     >
@@ -824,6 +1006,14 @@ export function InboxPage() {
                   )}
                 </form>
               </footer>
+
+              {/* WhatsApp Web Media Preview / Send Modal */}
+              <WhatsAppMediaPreviewModal
+                attachment={selectedAttachment}
+                onClose={() => setSelectedAttachment(null)}
+                onSend={handleSendAttachment}
+                isSending={sendMessage.isPending}
+              />
             </>
           ) : (
             <div className="grid h-full place-items-center p-8 text-center text-[#54656f]">
