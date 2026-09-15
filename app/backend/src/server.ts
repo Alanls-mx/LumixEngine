@@ -6,11 +6,9 @@ import Fastify from "fastify";
 import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   createHmac,
-  createPublicKey,
   randomBytes,
   scrypt as scryptCallback,
   timingSafeEqual,
-  verify as verifySignature,
 } from "node:crypto";
 import { promisify } from "node:util";
 import { Server as SocketIOServer } from "socket.io";
@@ -163,6 +161,7 @@ const sendMessageSchema = z.object({
   conteudo: z.string().trim().min(1),
   user_id: z.string().trim().min(1).optional(),
   client_request_id: z.string().trim().min(8).optional(),
+  reply_to_message_id: z.string().trim().optional(),
   channels: z
     .array(z.enum(["WHATSAPP", "EMAIL"]))
     .min(1)
@@ -179,10 +178,6 @@ const bootstrapSchema = z.object({
   nome: z.string().trim().min(1),
   email: z.string().trim().email(),
   password: z.string().min(8),
-});
-
-const googleLoginSchema = z.object({
-  credential: z.string().trim().min(20),
 });
 
 const userCreateSchema = z.object({
@@ -587,7 +582,6 @@ function isPublicRequest(request: FastifyRequest) {
     path === "/api/auth/config" ||
     path === "/api/auth/bootstrap" ||
     path === "/api/auth/login" ||
-    path === "/api/auth/google" ||
     path.startsWith("/api/webhooks") ||
     path.startsWith("/webhooks")
   );
@@ -649,101 +643,7 @@ function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   }
 }
 
-let googleJwksCache:
-  | {
-      expiresAt: number;
-      keys: Array<Record<string, unknown>>;
-    }
-  | undefined;
 
-async function fetchGoogleJwks() {
-  const now = Date.now();
-
-  if (googleJwksCache && googleJwksCache.expiresAt > now) {
-    return googleJwksCache.keys;
-  }
-
-  const response = await fetch("https://www.googleapis.com/oauth2/v3/certs");
-
-  if (!response.ok) {
-    throw new Error("Nao foi possivel carregar as chaves publicas do Google.");
-  }
-
-  const cacheControl = response.headers.get("cache-control") ?? "";
-  const maxAgeMatch = /max-age=(\d+)/.exec(cacheControl);
-  const maxAge = maxAgeMatch ? Number(maxAgeMatch[1]) : 60 * 30;
-  const body = (await response.json()) as { keys?: Array<Record<string, unknown>> };
-
-  googleJwksCache = {
-    expiresAt: now + maxAge * 1000,
-    keys: body.keys ?? [],
-  };
-
-  return googleJwksCache.keys;
-}
-
-async function verifyGoogleCredential(credential: string, clientId: string) {
-  const [headerSegment, payloadSegment, signatureSegment] = credential.split(".");
-
-  if (!headerSegment || !payloadSegment || !signatureSegment) {
-    throw new Error("Token Google invalido.");
-  }
-
-  const header = JSON.parse(
-    Buffer.from(headerSegment, "base64url").toString("utf8"),
-  ) as { kid?: string; alg?: string };
-  const payload = JSON.parse(
-    Buffer.from(payloadSegment, "base64url").toString("utf8"),
-  ) as {
-    aud?: string;
-    iss?: string;
-    exp?: number;
-    sub?: string;
-    email?: string;
-    name?: string;
-    picture?: string;
-  };
-
-  if (header.alg !== "RS256" || !header.kid) {
-    throw new Error("Assinatura Google invalida.");
-  }
-
-  if (
-    payload.aud !== clientId ||
-    !["accounts.google.com", "https://accounts.google.com"].includes(
-      payload.iss ?? "",
-    ) ||
-    !payload.exp ||
-    payload.exp < Math.floor(Date.now() / 1000) ||
-    !payload.sub ||
-    !payload.email
-  ) {
-    throw new Error("Credencial Google recusada.");
-  }
-
-  const jwk = (await fetchGoogleJwks()).find((key) => key.kid === header.kid);
-
-  if (!jwk) {
-    throw new Error("Chave publica Google nao encontrada.");
-  }
-
-  const publicKey = createPublicKey({
-    key: jwk,
-    format: "jwk",
-  });
-  const isValid = verifySignature(
-    "RSA-SHA256",
-    Buffer.from(`${headerSegment}.${payloadSegment}`),
-    publicKey,
-    Buffer.from(signatureSegment, "base64url"),
-  );
-
-  if (!isValid) {
-    throw new Error("Assinatura Google invalida.");
-  }
-
-  return payload;
-}
 
 function renderTemplate(template: string, lead: Awaited<ReturnType<typeof listLeads>>[number]) {
   const latestMessage = lead.messages[0]?.conteudo ?? "";
@@ -1071,10 +971,8 @@ app.get("/api/health", async () => ({
 }));
 
 app.get("/api/auth/config", async () => {
-  const settings = await getSettingsMap();
-
   return {
-    googleClientId: settings.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID ?? null,
+    googleClientId: null,
   };
 });
 
@@ -1144,66 +1042,6 @@ app.post("/api/auth/login", async (request, reply) => {
     token: signJwt(safeUser),
     user: safeUser,
   };
-});
-
-app.post("/api/auth/google", async (request, reply) => {
-  const payload = googleLoginSchema.parse(request.body);
-  const settings = await getSettingsMap();
-  const googleClientId = settings.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID;
-
-  if (!googleClientId) {
-    return reply.status(400).send({
-      error: "google_not_configured",
-      message: "Google Client ID nao configurado.",
-    });
-  }
-
-  try {
-    const googlePayload = await verifyGoogleCredential(
-      payload.credential,
-      googleClientId,
-    );
-    const googleId = googlePayload.sub as string;
-    const email = googlePayload.email!.toLowerCase();
-    const name = googlePayload.name ?? googlePayload.email!;
-    const picture = googlePayload.picture ?? null;
-
-    const user = await prisma.user.upsert({
-      where: {
-        email,
-      },
-      update: {
-        google_id: googleId,
-        nome: name,
-        avatar_url: picture,
-        ativo: true,
-        ultimo_login: new Date(),
-      },
-      create: {
-        email,
-        nome: name,
-        google_id: googleId,
-        avatar_url: picture,
-        role: UserRole.ATENDENTE,
-        ativo: true,
-        ultimo_login: new Date(),
-      },
-      include: userInclude,
-    });
-    const safeUser = toSafeUser(user);
-
-    return {
-      token: signJwt(safeUser),
-      user: safeUser,
-    };
-  } catch (error) {
-    app.log.warn({ error }, "Falha no login Google");
-
-    return reply.status(401).send({
-      error: "invalid_google_credential",
-      message: "Nao foi possivel validar a conta Google.",
-    });
-  }
 });
 
 app.get("/api/auth/me", async (request) => {
@@ -1862,12 +1700,33 @@ async function sendMessageRoute(request: FastifyRequest, reply: FastifyReply) {
 
   if (shouldSendWhatsApp && lead.telefone) {
     const whatsappSettings = await getWhatsAppSettings();
+
+    let quotedMessageId: string | null = null;
+    if (payload.reply_to_message_id) {
+      const quoted = await prisma.message.findUnique({
+        where: { id: payload.reply_to_message_id },
+      });
+      if (quoted?.provider_message_id) {
+        quotedMessageId = quoted.provider_message_id;
+      }
+    }
+
     deliveries.whatsapp = await sendWhatsAppMessage({
       telefone: lead.telefone,
       conteudo: payload.conteudo,
       settings: whatsappSettings,
       logger: app.log,
+      quotedMessageId,
     });
+
+    if (deliveries.whatsapp.providerMessageId) {
+      await prisma.message.update({
+        where: { id: message.id },
+        data: {
+          provider_message_id: deliveries.whatsapp.providerMessageId,
+        },
+      });
+    }
   }
 
   if (shouldSendEmail) {

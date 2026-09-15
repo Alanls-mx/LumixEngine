@@ -33,21 +33,14 @@ export function RootRoute() {
       <Toaster richColors position="top-right" />
       <div className="grid min-h-svh lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="hidden border-r border-white/10 bg-[#090d16] text-white lg:flex lg:flex-col">
-          <div className="flex h-20 items-center gap-3 border-b border-white/10 px-6">
-            <img
-              src="/assets/lumix-icon-96.webp"
-              alt=""
-              className="size-10 rounded-lg object-contain"
-              width={40}
-              height={40}
-            />
+          <div className="flex h-20 items-center border-b border-white/10 px-6">
             <div className="min-w-0">
               <img
                 src="/assets/lumix-logo-header-cropped.webp"
                 alt="LumixEngine"
-                className="h-7 w-auto object-contain"
-                width={162}
-                height={40}
+                className="h-8 w-auto object-contain"
+                width={170}
+                height={42}
               />
               <p className="mt-1 truncate text-xs text-slate-400">CRM, Inbox e Automações</p>
             </div>
@@ -78,13 +71,12 @@ export function RootRoute() {
             <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
               <div className="flex items-center gap-3 lg:hidden">
                 <img
-                  src="/assets/lumix-icon-96.webp"
-                  alt=""
-                  className="size-9 rounded-lg object-contain"
-                  width={36}
+                  src="/assets/lumix-logo-header-cropped.webp"
+                  alt="LumixEngine"
+                  className="h-7 w-auto object-contain"
+                  width={150}
                   height={36}
                 />
-                <span className="text-sm font-semibold">LumixEngine</span>
               </div>
 
               <div className="hidden h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 lg:flex">

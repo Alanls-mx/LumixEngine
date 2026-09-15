@@ -17,7 +17,6 @@ type AuthContextValue = {
   isLoading: boolean
   isAuthenticated: boolean
   login: (payload: { email: string; password: string }) => Promise<void>
-  loginWithGoogle: (credential: string) => Promise<void>
   bootstrap: (payload: { nome: string; email: string; password: string }) => Promise<void>
   logout: () => void
 }
@@ -59,14 +58,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [persistSession],
   )
 
-  const loginWithGoogle = useCallback(
-    async (credential: string) => {
-      const response = await authApi.google(credential)
-      persistSession(response.token, response.user)
-    },
-    [persistSession],
-  )
-
   const bootstrap = useCallback(
     async (payload: { nome: string; email: string; password: string }) => {
       const response = await authApi.bootstrap(payload)
@@ -86,11 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated: Boolean(user),
       login,
-      loginWithGoogle,
       bootstrap,
       logout,
     }),
-    [bootstrap, isLoading, login, loginWithGoogle, logout, user],
+    [bootstrap, isLoading, login, logout, user],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

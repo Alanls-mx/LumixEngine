@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   FileText,
-  Globe,
   Mail,
   MessageCircle,
   Plus,
@@ -32,7 +31,6 @@ const defaultFormState = {
   INTERNAL_LEAD_NOTIFICATION_EMAIL: '',
   WHATSAPP_API_URL: '',
   WHATSAPP_API_TOKEN: '',
-  GOOGLE_CLIENT_ID: '',
 }
 
 function getApiErrorMessage(error: unknown, fallback: string) {
@@ -229,21 +227,6 @@ export function SettingsPage() {
                 placeholder="Chave global da Evolution API"
               />
             </div>
-          </SettingsCard>
-
-          <SettingsCard
-            icon={Globe}
-            title="Login Google"
-            description="Habilita autenticação por Google Identity Services no painel interno."
-          >
-            <Field
-              label="Google Client ID"
-              value={formState.GOOGLE_CLIENT_ID ?? ''}
-              onChange={(value) =>
-                setFormState((state) => ({ ...state, GOOGLE_CLIENT_ID: value }))
-              }
-              placeholder="000000000000-xxxx.apps.googleusercontent.com"
-            />
           </SettingsCard>
         </div>
 

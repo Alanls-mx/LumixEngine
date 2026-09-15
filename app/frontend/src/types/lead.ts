@@ -104,6 +104,7 @@ export type SendMessagePayload = {
   conteudo: string
   user_id?: string
   client_request_id?: string
+  reply_to_message_id?: string
   channels?: Array<'WHATSAPP' | 'EMAIL'>
 }
 

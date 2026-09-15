@@ -6,6 +6,7 @@ type SendWhatsAppMessageInput = {
     warn: (payload: unknown, message?: string) => void;
     error: (payload: unknown, message?: string) => void;
   };
+  quotedMessageId?: string | null;
 };
 
 export type WhatsAppSettings = {
@@ -19,6 +20,7 @@ export type WhatsAppSendResult = {
   status?: number;
   response?: unknown;
   reason?: string;
+  providerMessageId?: string | null;
   errorType?:
     | "configuration_missing"
     | "auth_error"
@@ -29,7 +31,20 @@ export type WhatsAppSendResult = {
 };
 
 export function normalizePhone(value: string) {
-  return value.replace(/\D/g, "");
+  let cleaned = value.replace(/\D/g, "");
+
+  // Remove leading zeroes
+  if (cleaned.startsWith("0")) {
+    cleaned = cleaned.replace(/^0+/, "");
+  }
+
+  // Se o número tiver 10 ou 11 dígitos (DDD + 8 ou 9 dígitos sem DDI no Brasil),
+  // adiciona o DDI 55 do Brasil automaticamente.
+  if (cleaned.length === 10 || cleaned.length === 11) {
+    cleaned = `55${cleaned}`;
+  }
+
+  return cleaned;
 }
 
 export function getWhatsAppStatus(settings: WhatsAppSettings = {}) {
@@ -49,7 +64,7 @@ function classifyEvolutionError(status: number, payload: unknown) {
     typeof payload === "string" ? payload : JSON.stringify(payload ?? {});
   const normalized = serialized.toLowerCase();
 
-  if (status === 401 || status === 403 || normalized.includes("apikey")) {
+  if (status === 401 || status === 403 || normalized.includes("apikey") || normalized.includes("unauthorized")) {
     return "auth_error" as const;
   }
 
@@ -89,57 +104,100 @@ async function readEvolutionPayload(response: Response) {
   }
 }
 
+function extractProviderMessageId(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const data = payload as Record<string, unknown>;
+
+  if (typeof (data.key as Record<string, unknown> | undefined)?.id === "string") {
+    return (data.key as Record<string, unknown>).id as string;
+  }
+
+  const messageObj = data.message as Record<string, unknown> | undefined;
+  if (typeof (messageObj?.key as Record<string, unknown> | undefined)?.id === "string") {
+    return (messageObj!.key as Record<string, unknown>).id as string;
+  }
+
+  if (typeof data.id === "string") {
+    return data.id;
+  }
+
+  if (typeof data.messageId === "string") {
+    return data.messageId;
+  }
+
+  return null;
+}
+
 export async function sendWhatsAppMessage({
   telefone,
   conteudo,
   settings = {},
   logger,
+  quotedMessageId,
 }: SendWhatsAppMessageInput): Promise<WhatsAppSendResult> {
   const whatsappApiUrl =
-    settings.WHATSAPP_API_URL ?? process.env.WHATSAPP_API_URL;
+    (settings.WHATSAPP_API_URL ?? process.env.WHATSAPP_API_URL ?? "").trim();
   const whatsappApiToken =
-    settings.WHATSAPP_API_TOKEN ?? process.env.WHATSAPP_API_TOKEN;
+    (settings.WHATSAPP_API_TOKEN ?? process.env.WHATSAPP_API_TOKEN ?? "").trim();
   const number = normalizePhone(telefone);
 
   if (!whatsappApiUrl || !whatsappApiToken) {
-    console.info("Evolution API não configurada; envio WhatsApp ignorado.");
     return {
       ok: false,
       skipped: true,
-      reason: "URL de envio ou Token / API Key não configurados.",
+      reason: "URL de envio ou Token / API Key não configurados nas Configurações.",
       errorType: "configuration_missing",
     };
   }
 
-  if (!number || number.length < 12) {
+  if (!number || number.length < 10) {
     return {
       ok: false,
       skipped: false,
-      reason: "Número inválido para Evolution API.",
+      reason: "Número de telefone inválido para envio via WhatsApp.",
       errorType: "invalid_number",
     };
   }
 
   try {
-    const response = await fetch(whatsappApiUrl, {
+    const cleanUrl = whatsappApiUrl.replace(/\/+$/, "");
+
+    const payloadBody: Record<string, unknown> = {
+      number,
+      text: conteudo,
+    };
+
+    if (quotedMessageId) {
+      payloadBody.quoted = {
+        key: {
+          id: quotedMessageId,
+        },
+      };
+    }
+
+    const response = await fetch(cleanUrl, {
       method: "POST",
       signal: AbortSignal.timeout(15000),
       headers: {
         "Content-Type": "application/json",
         apikey: whatsappApiToken,
+        Authorization: `Bearer ${whatsappApiToken}`,
       },
-      body: JSON.stringify({
-        number,
-        text: conteudo,
-      }),
+      body: JSON.stringify(payloadBody),
     });
 
     const payload = await readEvolutionPayload(response);
+    const providerMessageId = extractProviderMessageId(payload);
+
     const result: WhatsAppSendResult = {
       ok: response.ok,
       skipped: false,
       status: response.status,
       response: payload,
+      providerMessageId,
       ...(response.ok
         ? {}
         : {
@@ -174,7 +232,7 @@ export async function sendWhatsAppMessage({
     return {
       ok: false,
       skipped: false,
-      reason: "Não foi possível conectar à Evolution API.",
+      reason: "Não foi possível conectar à Evolution API (verifique se o servidor está ativo).",
       errorType: "network_error",
     };
   }

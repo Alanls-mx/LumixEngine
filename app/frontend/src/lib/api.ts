@@ -96,11 +96,7 @@ export const authApi = {
       body: payload,
     }),
 
-  google: (credential: string) =>
-    apiRequest<AuthResponse>('/auth/google', {
-      method: 'POST',
-      body: { credential },
-    }),
+
 
   me: () => apiRequest<{ user: User }>('/auth/me'),
 }

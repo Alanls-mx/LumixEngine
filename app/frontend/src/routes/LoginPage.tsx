@@ -1,37 +1,12 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 
-import { useQuery } from '@tanstack/react-query'
-import { Bot, Globe, LockKeyhole, Mail, UserPlus } from 'lucide-react'
+import { Bot, LockKeyhole, Mail, UserPlus } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/AuthProvider'
-import { ApiError, authApi } from '@/lib/api'
-
-declare global {
-  interface Window {
-    google?: {
-      accounts?: {
-        id?: {
-          initialize: (config: {
-            client_id: string
-            callback: (response: { credential?: string }) => void
-          }) => void
-          renderButton: (
-            element: HTMLElement,
-            options: {
-              theme: 'outline' | 'filled_blue'
-              size: 'large'
-              width?: number
-              text?: 'signin_with' | 'continue_with'
-            },
-          ) => void
-        }
-      }
-    }
-  }
-}
+import { ApiError } from '@/lib/api'
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (
@@ -50,7 +25,6 @@ function getErrorMessage(error: unknown, fallback: string) {
 export function LoginPage() {
   const auth = useAuth()
   const navigate = useNavigate()
-  const googleButtonRef = useRef<HTMLDivElement | null>(null)
   const [mode, setMode] = useState<'login' | 'bootstrap'>('login')
   const [formState, setFormState] = useState({
     nome: '',
@@ -58,59 +32,6 @@ export function LoginPage() {
     password: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const configQuery = useQuery({
-    queryKey: ['auth-config'],
-    queryFn: authApi.config,
-  })
-
-  useEffect(() => {
-    const googleClientId = configQuery.data?.googleClientId
-
-    if (!googleClientId || !googleButtonRef.current) {
-      return
-    }
-
-    const scriptId = 'google-identity-services'
-    const render = () => {
-      window.google?.accounts?.id?.initialize({
-        client_id: googleClientId,
-        callback: async (response) => {
-          if (!response.credential) {
-            toast.error('Login Google sem credencial.')
-            return
-          }
-
-          try {
-            await auth.loginWithGoogle(response.credential)
-            navigate('/', { replace: true })
-          } catch (error) {
-            toast.error(getErrorMessage(error, 'Não foi possível entrar com Google'))
-          }
-        },
-      })
-      googleButtonRef.current!.innerHTML = ''
-      window.google?.accounts?.id?.renderButton(googleButtonRef.current!, {
-        theme: 'outline',
-        size: 'large',
-        width: 320,
-        text: 'continue_with',
-      })
-    }
-
-    if (document.getElementById(scriptId)) {
-      render()
-      return
-    }
-
-    const script = document.createElement('script')
-    script.id = scriptId
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-    script.onload = render
-    document.head.appendChild(script)
-  }, [auth, configQuery.data?.googleClientId, navigate])
 
   if (auth.isAuthenticated) {
     return <Navigate to="/" replace />
@@ -244,15 +165,7 @@ export function LoginPage() {
                 : 'Entrar no painel'}
           </Button>
 
-          {configQuery.data?.googleClientId && (
-            <div className="mt-5 border-t border-slate-200 pt-5">
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-slate-500">
-                <Globe className="size-4" aria-hidden="true" />
-                Google Workspace
-              </div>
-              <div ref={googleButtonRef} />
-            </div>
-          )}
+
 
           <p className="mt-5 text-xs leading-5 text-slate-500">
             Contas seed antigas aceitam temporariamente a senha
