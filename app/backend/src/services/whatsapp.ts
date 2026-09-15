@@ -31,7 +31,11 @@ export type WhatsAppSendResult = {
 };
 
 export function normalizePhone(value: string) {
-  let cleaned = value.replace(/\D/g, "");
+  // Strip JID domain and multi-device identifier first:
+  // e.g. "5511999998888:12@s.whatsapp.net" -> "5511999998888"
+  const partBeforeAt = (value || "").split("@")[0] ?? "";
+  const cleanStr = partBeforeAt.split(":")[0] ?? "";
+  let cleaned = cleanStr.replace(/\D/g, "");
 
   // Remove leading zeroes
   if (cleaned.startsWith("0")) {
@@ -47,6 +51,36 @@ export function normalizePhone(value: string) {
   return cleaned;
 }
 
+export function arePhonesEquivalent(phoneA: string, phoneB: string): boolean {
+  const a = normalizePhone(phoneA);
+  const b = normalizePhone(phoneB);
+
+  if (!a || !b) return false;
+  if (a === b) return true;
+
+  // Comparação de telefones brasileiros tolerando a presença ou ausência do 9º dígito
+  if (a.startsWith("55") && b.startsWith("55") && a.length >= 12 && b.length >= 12) {
+    const dddA = a.slice(2, 4);
+    const dddB = b.slice(2, 4);
+
+    if (dddA === dddB) {
+      const last8A = a.slice(-8);
+      const last8B = b.slice(-8);
+      if (last8A === last8B) {
+        return true;
+      }
+    }
+  }
+
+  if (a.length >= 8 && b.length >= 8) {
+    if (a.endsWith(b) || b.endsWith(a)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function getWhatsAppStatus(settings: WhatsAppSettings = {}) {
   const apiUrl = settings.WHATSAPP_API_URL ?? process.env.WHATSAPP_API_URL;
   const apiToken =
@@ -57,6 +91,128 @@ export function getWhatsAppStatus(settings: WhatsAppSettings = {}) {
     apiUrl: apiUrl ?? null,
     hasToken: Boolean(apiToken),
   };
+}
+
+export async function configureWhatsAppWebhook(
+  settings: WhatsAppSettings = {},
+  customWebhookUrl?: string,
+  logger?: {
+    warn: (payload: unknown, message?: string) => void;
+    error: (payload: unknown, message?: string) => void;
+    info?: (payload: unknown, message?: string) => void;
+  },
+): Promise<{
+  ok: boolean;
+  message: string;
+  webhookUrl?: string;
+  details?: unknown;
+}> {
+  const apiUrl = (
+    settings.WHATSAPP_API_URL ?? process.env.WHATSAPP_API_URL ?? ""
+  ).trim();
+  const apiToken = (
+    settings.WHATSAPP_API_TOKEN ?? process.env.WHATSAPP_API_TOKEN ?? ""
+  ).trim();
+
+  if (!apiUrl || !apiToken) {
+    return {
+      ok: false,
+      message: "URL de envio ou Token da Evolution API não configurados.",
+    };
+  }
+
+  const cleanUrl = apiUrl.replace(/\/+$/, "");
+  const match = cleanUrl.match(/(?:message\/sendText|sendText)\/([^/?#]+)/i);
+  const instanceName = match && match[1] ? match[1] : "lumixengine";
+  const baseUrl = match
+    ? cleanUrl.slice(0, match.index).replace(/\/+$/, "")
+    : cleanUrl.replace(/\/(?:message|instance|webhook).*$/i, "").replace(/\/+$/, "");
+
+  const webhookUrl =
+    customWebhookUrl ||
+    (process.env.PUBLIC_APP_URL
+      ? `${process.env.PUBLIC_APP_URL.replace(/\/+$/, "")}/api/webhooks/whatsapp`
+      : "https://app.lumixengine.com/api/webhooks/whatsapp");
+
+  const headers = {
+    "Content-Type": "application/json",
+    apikey: apiToken,
+    Authorization: `Bearer ${apiToken}`,
+  };
+
+  const webhookEvents = [
+    "APPLICATION_STARTUP",
+    "QRCODE_UPDATED",
+    "MESSAGES_SET",
+    "MESSAGES_UPSERT",
+    "MESSAGES_UPDATE",
+    "MESSAGES_DELETE",
+    "SEND_MESSAGE",
+    "CONNECTION_UPDATE",
+  ];
+
+  // Payload híbrido compatível com Evolution API v1 e v2
+  const webhookBody = {
+    enabled: true,
+    url: webhookUrl,
+    webhookUrl,
+    byEvents: false,
+    webhookByEvents: false,
+    base64: false,
+    events: webhookEvents,
+    webhook: {
+      enabled: true,
+      url: webhookUrl,
+      byEvents: false,
+      base64: false,
+      events: webhookEvents,
+    },
+  };
+
+  try {
+    const res = await fetch(
+      `${baseUrl}/webhook/set/${encodeURIComponent(instanceName)}`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(webhookBody),
+        signal: AbortSignal.timeout(10000),
+      },
+    );
+
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      logger?.info?.(
+        { data, webhookUrl, instanceName },
+        "Webhook da Evolution API configurado com sucesso",
+      );
+      return {
+        ok: true,
+        message: `Webhook configurado com sucesso para ${webhookUrl} na instância "${instanceName}"!`,
+        webhookUrl,
+        details: data,
+      };
+    }
+
+    const errorPayload = await res.text().catch(() => "");
+    logger?.warn(
+      { status: res.status, errorPayload, instanceName },
+      "Tentativa de configurar webhook na Evolution API retornou erro",
+    );
+
+    return {
+      ok: false,
+      message: `Evolution API retornou status HTTP ${res.status} ao configurar webhook.`,
+      details: errorPayload,
+    };
+  } catch (error) {
+    logger?.error({ error }, "Erro ao conectar para configurar webhook na Evolution API");
+    return {
+      ok: false,
+      message: "Falha de conexão ao tentar registrar o webhook na Evolution API.",
+      details: String(error),
+    };
+  }
 }
 
 export async function verifyWhatsAppConnection(
@@ -401,10 +557,28 @@ function extractProviderMessageId(payload: unknown): string | null {
     return null;
   }
 
-  const data = payload as Record<string, unknown>;
+  const obj = Array.isArray(payload) ? payload[0] : (payload as Record<string, unknown>);
+  if (!obj || typeof obj !== "object") {
+    return null;
+  }
+
+  const data = obj as Record<string, unknown>;
 
   if (typeof (data.key as Record<string, unknown> | undefined)?.id === "string") {
     return (data.key as Record<string, unknown>).id as string;
+  }
+
+  const innerData = data.data as Record<string, unknown> | undefined;
+  if (innerData && typeof innerData === "object") {
+    if (typeof (innerData.key as Record<string, unknown> | undefined)?.id === "string") {
+      return (innerData.key as Record<string, unknown>).id as string;
+    }
+    if (typeof innerData.id === "string") {
+      return innerData.id;
+    }
+    if (typeof innerData.messageId === "string") {
+      return innerData.messageId;
+    }
   }
 
   const messageObj = data.message as Record<string, unknown> | undefined;

@@ -33,6 +33,8 @@ import {
   type MailSettings,
 } from "./services/mail.js";
 import {
+  arePhonesEquivalent,
+  configureWhatsAppWebhook,
   getWhatsAppConnectQrCode,
   getWhatsAppStatus,
   normalizePhone,
@@ -340,64 +342,187 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function getNestedString(value: unknown, path: string[]) {
-  let currentValue = value;
-
-  for (const segment of path) {
-    if (!isRecord(currentValue)) {
-      return undefined;
-    }
-
-    currentValue = currentValue[segment];
+function unwrapWhatsAppPayloadItem(body: unknown): Record<string, unknown> | null {
+  if (!body || typeof body !== "object") {
+    return null;
   }
 
-  return typeof currentValue === "string" ? currentValue : undefined;
+  const root = body as Record<string, unknown>;
+
+  // If root itself has key, remoteJid, or message
+  if (root.key || root.remoteJid || root.message) {
+    return root;
+  }
+
+  // If root.data is an array (Evolution API v1 and v2 standard)
+  if (Array.isArray(root.data) && root.data.length > 0) {
+    const first = root.data[0];
+    if (first && typeof first === "object") {
+      return first as Record<string, unknown>;
+    }
+  }
+
+  // If root.data is an object
+  if (root.data && typeof root.data === "object" && !Array.isArray(root.data)) {
+    return root.data as Record<string, unknown>;
+  }
+
+  // If root itself is an array
+  if (Array.isArray(body) && body.length > 0) {
+    const first = body[0];
+    if (first && typeof first === "object") {
+      return first as Record<string, unknown>;
+    }
+  }
+
+  return root;
 }
 
-function extractWhatsAppPhone(body: unknown) {
-  const phone =
-    getNestedString(body, ["telefone"]) ??
-    getNestedString(body, ["phone"]) ??
-    getNestedString(body, ["from"]) ??
-    getNestedString(body, ["number"]) ??
-    getNestedString(body, ["sender"]) ??
-    getNestedString(body, ["data", "key", "remoteJid"]) ??
-    getNestedString(body, ["data", "remoteJid"]);
+function extractWhatsAppPhone(body: unknown): string | undefined {
+  const item = unwrapWhatsAppPayloadItem(body);
+  if (!item) return undefined;
 
-  return phone ? normalizePhone(phone) : undefined;
+  const keyObj = (item.key && typeof item.key === "object" ? item.key : undefined) as
+    | Record<string, unknown>
+    | undefined;
+
+  const rawPhone =
+    (typeof item.telefone === "string" ? item.telefone : undefined) ??
+    (typeof item.phone === "string" ? item.phone : undefined) ??
+    (typeof item.from === "string" ? item.from : undefined) ??
+    (typeof item.number === "string" ? item.number : undefined) ??
+    (typeof item.sender === "string" ? item.sender : undefined) ??
+    (typeof keyObj?.remoteJid === "string" ? keyObj.remoteJid : undefined) ??
+    (typeof item.remoteJid === "string" ? item.remoteJid : undefined) ??
+    (typeof item.participant === "string" ? item.participant : undefined);
+
+  if (!rawPhone) return undefined;
+
+  // Ignore status broadcasts
+  if (rawPhone.includes("@broadcast") || rawPhone.includes("status@broadcast")) {
+    return undefined;
+  }
+
+  const normalized = normalizePhone(rawPhone);
+  return normalized && normalized.length >= 10 ? normalized : undefined;
 }
 
-function extractWhatsAppText(body: unknown) {
-  return (
-    getNestedString(body, ["conteudo"]) ??
-    getNestedString(body, ["text"]) ??
-    getNestedString(body, ["message"]) ??
-    getNestedString(body, ["body"]) ??
-    getNestedString(body, ["data", "message", "conversation"]) ??
-    getNestedString(body, ["data", "message", "extendedTextMessage", "text"])
-  );
+function extractWhatsAppText(body: unknown): string | undefined {
+  const item = unwrapWhatsAppPayloadItem(body);
+  if (!item) return undefined;
+
+  if (typeof item.conteudo === "string" && item.conteudo.trim()) return item.conteudo.trim();
+  if (typeof item.text === "string" && item.text.trim()) return item.text.trim();
+  if (typeof item.body === "string" && item.body.trim()) return item.body.trim();
+  if (typeof item.message === "string" && item.message.trim()) return item.message.trim();
+
+  const msg = (item.message && typeof item.message === "object" ? item.message : undefined) as
+    | Record<string, unknown>
+    | undefined;
+
+  if (!msg) return undefined;
+
+  // 1. Conversação padrão
+  if (typeof msg.conversation === "string" && msg.conversation.trim()) {
+    return msg.conversation.trim();
+  }
+
+  // 2. Mensagem estendida (respostas a outras mensagens, formatação, links)
+  const ext = (msg.extendedTextMessage && typeof msg.extendedTextMessage === "object"
+    ? msg.extendedTextMessage
+    : undefined) as Record<string, unknown> | undefined;
+  if (typeof ext?.text === "string" && ext.text.trim()) {
+    return ext.text.trim();
+  }
+
+  // 3. Botões interativos
+  const btn = (msg.buttonsResponseMessage && typeof msg.buttonsResponseMessage === "object"
+    ? msg.buttonsResponseMessage
+    : undefined) as Record<string, unknown> | undefined;
+  if (typeof btn?.selectedDisplayText === "string" && btn.selectedDisplayText.trim()) {
+    return btn.selectedDisplayText.trim();
+  }
+
+  // 4. Lista interativa
+  const list = (msg.listResponseMessage && typeof msg.listResponseMessage === "object"
+    ? msg.listResponseMessage
+    : undefined) as Record<string, unknown> | undefined;
+  if (typeof list?.title === "string" && list.title.trim()) {
+    return list.title.trim();
+  }
+
+  // 5. Mídias (imagem, vídeo, documento, áudio)
+  const img = (msg.imageMessage && typeof msg.imageMessage === "object" ? msg.imageMessage : undefined) as
+    | Record<string, unknown>
+    | undefined;
+  if (img) {
+    return typeof img.caption === "string" && img.caption.trim() ? img.caption.trim() : "[Imagem]";
+  }
+
+  const video = (msg.videoMessage && typeof msg.videoMessage === "object" ? msg.videoMessage : undefined) as
+    | Record<string, unknown>
+    | undefined;
+  if (video) {
+    return typeof video.caption === "string" && video.caption.trim() ? video.caption.trim() : "[Vídeo]";
+  }
+
+  const doc = (msg.documentMessage && typeof msg.documentMessage === "object" ? msg.documentMessage : undefined) as
+    | Record<string, unknown>
+    | undefined;
+  if (doc) {
+    const fileName = typeof doc.fileName === "string" ? `: ${doc.fileName}` : "";
+    return typeof doc.caption === "string" && doc.caption.trim() ? doc.caption.trim() : `[Documento${fileName}]`;
+  }
+
+  if (msg.audioMessage) return "[Áudio]";
+  if (msg.stickerMessage) return "[Figurinha]";
+  if (msg.contactMessage) return "[Contato]";
+  if (msg.locationMessage) return "[Localização]";
+
+  return undefined;
 }
 
-function extractWhatsAppName(body: unknown) {
-  return (
-    getNestedString(body, ["nome"]) ??
-    getNestedString(body, ["name"]) ??
-    getNestedString(body, ["pushName"]) ??
-    getNestedString(body, ["data", "pushName"]) ??
-    "Lead WhatsApp"
-  );
+function extractWhatsAppFromMe(body: unknown): boolean {
+  const item = unwrapWhatsAppPayloadItem(body);
+  if (!item) return false;
+
+  const keyObj = (item.key && typeof item.key === "object" ? item.key : undefined) as
+    | Record<string, unknown>
+    | undefined;
+
+  return keyObj?.fromMe === true || item.fromMe === true;
 }
 
-function extractWhatsAppEvent(body: unknown) {
-  return (
-    getNestedString(body, ["event"]) ??
-    getNestedString(body, ["type"]) ??
-    getNestedString(body, ["data", "event"]) ??
-    getNestedString(body, ["data", "type"])
-  );
+function extractWhatsAppName(body: unknown): string {
+  const item = unwrapWhatsAppPayloadItem(body);
+  if (!item) return "Lead WhatsApp";
+
+  const name =
+    (typeof item.pushName === "string" ? item.pushName : undefined) ??
+    (typeof item.name === "string" ? item.name : undefined) ??
+    (typeof item.nome === "string" ? item.nome : undefined) ??
+    (typeof item.verifiedName === "string" ? item.verifiedName : undefined);
+
+  return name && name.trim() ? name.trim() : "Lead WhatsApp";
 }
 
-function isTechnicalWhatsAppEvent(body: unknown) {
+function extractWhatsAppEvent(body: unknown): string | undefined {
+  if (!body || typeof body !== "object") return undefined;
+  const root = body as Record<string, unknown>;
+
+  if (typeof root.event === "string") return root.event;
+  if (typeof root.type === "string") return root.type;
+
+  const item = unwrapWhatsAppPayloadItem(body);
+  if (item) {
+    if (typeof item.event === "string") return item.event;
+    if (typeof item.type === "string") return item.type;
+  }
+
+  return undefined;
+}
+
+function isTechnicalWhatsAppEvent(body: unknown): boolean {
   const event = extractWhatsAppEvent(body)?.toLowerCase();
 
   if (!event) {
@@ -407,19 +532,113 @@ function isTechnicalWhatsAppEvent(body: unknown) {
   return (
     event.includes("connection") ||
     event.includes("qrcode") ||
-    event.includes("status") ||
-    event.includes("presence")
+    event.includes("presence") ||
+    event.includes("chats") ||
+    event.includes("contacts")
   );
 }
 
-function extractWhatsAppProviderMessageId(body: unknown) {
-  return (
-    getNestedString(body, ["provider_message_id"]) ??
-    getNestedString(body, ["messageId"]) ??
-    getNestedString(body, ["id"]) ??
-    getNestedString(body, ["data", "key", "id"]) ??
-    getNestedString(body, ["data", "id"])
-  );
+function extractWhatsAppProviderMessageId(body: unknown): string | undefined {
+  const item = unwrapWhatsAppPayloadItem(body);
+  if (!item) return undefined;
+
+  const keyObj = (item.key && typeof item.key === "object" ? item.key : undefined) as
+    | Record<string, unknown>
+    | undefined;
+
+  const id =
+    (typeof keyObj?.id === "string" ? keyObj.id : undefined) ??
+    (typeof item.id === "string" ? item.id : undefined) ??
+    (typeof item.provider_message_id === "string" ? item.provider_message_id : undefined) ??
+    (typeof item.messageId === "string" ? item.messageId : undefined);
+
+  return id;
+}
+
+type WhatsAppStatusUpdate = {
+  providerMessageId: string;
+  statusEnvio: MessageStatusEnvio;
+};
+
+function mapWhatsAppStatusToEnvio(rawStatus: unknown): MessageStatusEnvio | null {
+  if (typeof rawStatus === "number") {
+    // Baileys numeric ack:
+    // 0 = ERROR, 1 = PENDING/SERVER_ACK, 2 = DELIVERY_ACK (double grey), 3 = READ (blue), 4 = PLAYED
+    if (rawStatus === 3 || rawStatus === 4) return MessageStatusEnvio.LIDO;
+    if (rawStatus === 2) return MessageStatusEnvio.ENTREGUE;
+    if (rawStatus === 1) return MessageStatusEnvio.ENVIADO;
+    if (rawStatus === 0) return MessageStatusEnvio.ERRO;
+  }
+
+  if (typeof rawStatus === "string") {
+    const s = rawStatus.toUpperCase();
+    if (s.includes("READ") || s.includes("PLAYED") || s === "3" || s === "4") {
+      return MessageStatusEnvio.LIDO;
+    }
+    if (s.includes("DELIVERY") || s.includes("RECEIPT") || s.includes("DELIVERED") || s === "2") {
+      return MessageStatusEnvio.ENTREGUE;
+    }
+    if (s.includes("SERVER") || s.includes("SENT") || s === "1") {
+      return MessageStatusEnvio.ENVIADO;
+    }
+    if (s.includes("ERROR") || s.includes("FAIL") || s === "0") {
+      return MessageStatusEnvio.ERRO;
+    }
+  }
+
+  return null;
+}
+
+function extractWhatsAppStatusUpdates(body: unknown): WhatsAppStatusUpdate[] {
+  if (!body || typeof body !== "object") return [];
+
+  const root = body as Record<string, unknown>;
+  const items: Array<Record<string, unknown>> = [];
+
+  if (Array.isArray(root.data)) {
+    for (const d of root.data) {
+      if (d && typeof d === "object") items.push(d as Record<string, unknown>);
+    }
+  } else if (root.data && typeof root.data === "object") {
+    items.push(root.data as Record<string, unknown>);
+  } else if (Array.isArray(body)) {
+    for (const d of body) {
+      if (d && typeof d === "object") items.push(d as Record<string, unknown>);
+    }
+  } else {
+    items.push(root);
+  }
+
+  const updates: WhatsAppStatusUpdate[] = [];
+
+  for (const item of items) {
+    const keyObj = (item.key && typeof item.key === "object" ? item.key : undefined) as
+      | Record<string, unknown>
+      | undefined;
+    const updateObj = (item.update && typeof item.update === "object" ? item.update : undefined) as
+      | Record<string, unknown>
+      | undefined;
+
+    const messageId =
+      (typeof keyObj?.id === "string" ? keyObj.id : undefined) ??
+      (typeof item.id === "string" ? item.id : undefined) ??
+      (typeof item.provider_message_id === "string" ? item.provider_message_id : undefined) ??
+      (typeof item.messageId === "string" ? item.messageId : undefined);
+
+    const rawStatus =
+      updateObj?.status ??
+      item.status ??
+      item.status_envio ??
+      (item.read === true ? "READ" : undefined);
+
+    const statusEnvio = mapWhatsAppStatusToEnvio(rawStatus);
+
+    if (messageId && statusEnvio) {
+      updates.push({ providerMessageId: messageId, statusEnvio });
+    }
+  }
+
+  return updates;
 }
 
 type AuthUser = {
@@ -1079,6 +1298,13 @@ app.put("/api/settings", async (request) => {
   const payload = appSettingsSchema.parse(request.body);
   await upsertSettings(payload);
 
+  if (payload.WHATSAPP_API_URL || payload.WHATSAPP_API_TOKEN) {
+    const wsSettings = await getWhatsAppSettings();
+    configureWhatsAppWebhook(wsSettings, undefined, app.log).catch((err) => {
+      app.log.warn({ err }, "Tentativa em background de configurar webhook falhou no save");
+    });
+  }
+
   return {
     ok: true,
     ...(await (async () => {
@@ -1154,6 +1380,13 @@ app.post("/api/settings/whatsapp/verify", async (_request, reply) => {
   try {
     const result = await verifyWhatsAppConnection(whatsappSettings, app.log);
 
+    // Se estiver conectado ou acessível, garante que o webhook está registrado na Evolution API
+    if (result.ok || result.state === "close" || result.state === "open") {
+      configureWhatsAppWebhook(whatsappSettings, undefined, app.log).catch((err) => {
+        app.log.warn({ err }, "Tentativa em background de configurar webhook falhou");
+      });
+    }
+
     if (!result.ok) {
       return reply.status(400).send(result);
     }
@@ -1176,6 +1409,11 @@ app.post("/api/settings/whatsapp/connect", async (_request, reply) => {
   try {
     const result = await getWhatsAppConnectQrCode(whatsappSettings, app.log);
 
+    // Registra o webhook também ao iniciar conexão
+    configureWhatsAppWebhook(whatsappSettings, undefined, app.log).catch((err) => {
+      app.log.warn({ err }, "Tentativa em background de configurar webhook falhou");
+    });
+
     if (!result.ok) {
       return reply.status(400).send(result);
     }
@@ -1187,6 +1425,27 @@ app.post("/api/settings/whatsapp/connect", async (_request, reply) => {
     return reply.status(400).send({
       ok: false,
       message: "Falha ao solicitar conexão com a Evolution API.",
+    });
+  }
+});
+
+app.post("/api/settings/whatsapp/configure-webhook", async (_request, reply) => {
+  const whatsappSettings = await getWhatsAppSettings();
+
+  try {
+    const result = await configureWhatsAppWebhook(whatsappSettings, undefined, app.log);
+
+    if (!result.ok) {
+      return reply.status(400).send(result);
+    }
+
+    return result;
+  } catch (error) {
+    app.log.error({ error }, "Erro ao configurar webhook na Evolution API");
+
+    return reply.status(400).send({
+      ok: false,
+      message: "Falha ao registrar o webhook na Evolution API.",
     });
   }
 });
@@ -1765,12 +2024,17 @@ async function sendMessageRoute(request: FastifyRequest, reply: FastifyReply) {
     });
 
     if (deliveries.whatsapp.providerMessageId) {
-      await prisma.message.update({
+      const updatedMsg = await prisma.message.update({
         where: { id: message.id },
         data: {
           provider_message_id: deliveries.whatsapp.providerMessageId,
         },
+        include: {
+          user: true,
+          lead: true,
+        },
       });
+      io.emit("message_updated", updatedMsg);
     }
   }
 
@@ -1918,6 +2182,9 @@ async function webhookLeadRoute(request: { body: unknown }, reply: { code: (stat
 }
 
 async function findLeadByNormalizedPhone(phone: string) {
+  const norm = normalizePhone(phone);
+  if (!norm) return null;
+
   const leadsWithPhone = await prisma.lead.findMany({
     where: {
       telefone: {
@@ -1926,7 +2193,11 @@ async function findLeadByNormalizedPhone(phone: string) {
     },
   });
 
-  return leadsWithPhone.find((lead) => normalizePhone(lead.telefone ?? "") === phone);
+  return (
+    leadsWithPhone.find((lead) =>
+      arePhonesEquivalent(lead.telefone ?? "", norm),
+    ) ?? null
+  );
 }
 
 async function sendWelcomeAutoResponse(lead: { id: string; telefone: string | null }) {
@@ -1993,26 +2264,85 @@ async function sendWelcomeAutoResponse(lead: { id: string; telefone: string | nu
   }
 }
 
-async function webhookWhatsAppRoute(request: { body: unknown }, reply: { status: (statusCode: number) => { send: (payload: unknown) => unknown }; code: (statusCode: number) => unknown }) {
+async function webhookWhatsAppRoute(
+  request: { body: unknown },
+  reply: {
+    status: (statusCode: number) => { send: (payload: unknown) => unknown };
+    code: (statusCode: number) => unknown;
+  },
+) {
+  // 1. Confirmação de Leitura e atualizações de status (Read Receipts / Baileys acks)
+  const statusUpdates = extractWhatsAppStatusUpdates(request.body);
+  if (statusUpdates.length > 0) {
+    let updatedCount = 0;
+    for (const update of statusUpdates) {
+      const existingMessage = await prisma.message.findFirst({
+        where: {
+          provider_message_id: update.providerMessageId,
+        },
+        include: {
+          user: true,
+          lead: true,
+        },
+      });
+
+      if (existingMessage) {
+        // Evita rebaixar status de LIDO para ENTREGUE/ENVIADO caso o ack chegue fora de ordem
+        if (
+          existingMessage.status_envio === MessageStatusEnvio.LIDO &&
+          update.statusEnvio !== MessageStatusEnvio.LIDO
+        ) {
+          continue;
+        }
+
+        const updatedMessage = await prisma.message.update({
+          where: { id: existingMessage.id },
+          data: { status_envio: update.statusEnvio },
+          include: {
+            user: true,
+            lead: true,
+          },
+        });
+
+        io.emit("message_updated", updatedMessage);
+        io.emit("lead_updated", updatedMessage.lead);
+        updatedCount++;
+      }
+    }
+
+    return {
+      ok: true,
+      event: "status_update",
+      updatedCount,
+    };
+  }
+
+  // 2. Eventos técnicos ou de ciclo de vida (connection.update, qrcode, presence)
+  if (isTechnicalWhatsAppEvent(request.body)) {
+    return {
+      ok: true,
+      ignored: true,
+      event: extractWhatsAppEvent(request.body),
+    };
+  }
+
+  // 3. Extração dos dados da mensagem
   const phone = extractWhatsAppPhone(request.body);
   const conteudo = extractWhatsAppText(request.body);
   const providerMessageId = extractWhatsAppProviderMessageId(request.body);
+  const fromMe = extractWhatsAppFromMe(request.body);
 
   if (!phone || !conteudo) {
-    if (isTechnicalWhatsAppEvent(request.body)) {
-      return {
-        ok: true,
-        ignored: true,
-        event: extractWhatsAppEvent(request.body),
-      };
-    }
-
-    return reply.status(400).send({
-      error: "invalid_whatsapp_payload",
-      message: "Payload sem telefone ou conteúdo de mensagem.",
-    });
+    // Retorna 200 para não quebrar a fila de webhooks da Evolution API
+    return {
+      ok: true,
+      ignored: true,
+      event: extractWhatsAppEvent(request.body),
+      reason: "payload_without_phone_or_content",
+    };
   }
 
+  // 4. Deduplicação por provider_message_id
   if (providerMessageId) {
     const existingMessage = await prisma.message.findUnique({
       where: {
@@ -2034,6 +2364,7 @@ async function webhookWhatsAppRoute(request: { body: unknown }, reply: { status:
     }
   }
 
+  // 5. Localiza lead existente com comparação tolerante do 9º dígito brasileiro
   const existingLead = await findLeadByNormalizedPhone(phone);
   const isNewLead = !existingLead;
 
@@ -2057,6 +2388,35 @@ async function webhookWhatsAppRoute(request: { body: unknown }, reply: { status:
         include: leadInclude,
       });
 
+  // 6. Se a mensagem foi enviada pelo próprio número (ex: atendente respondeu pelo celular no WhatsApp)
+  if (fromMe) {
+    const outboundMessage = await prisma.message.create({
+      data: {
+        lead_id: lead.id,
+        conteudo,
+        origem: MessageOrigem.WHATSAPP,
+        direcao: MessageDirecao.OUTBOUND,
+        status_envio: MessageStatusEnvio.ENTREGUE,
+        ...(providerMessageId ? { provider_message_id: providerMessageId } : {}),
+      },
+      include: {
+        user: true,
+        lead: true,
+      },
+    });
+
+    io.emit("message_sent", outboundMessage);
+    io.emit("lead_updated", lead);
+
+    return {
+      ok: true,
+      synced_outbound: true,
+      lead,
+      message: outboundMessage,
+    };
+  }
+
+  // 7. Mensagem inbound (respondida ou iniciada pelo cliente)
   const inboundMessage = await prisma.message.create({
     data: {
       lead_id: lead.id,
@@ -2131,6 +2491,8 @@ app.post("/api/webhooks", webhookLeadRoute);
 app.post("/webhooks", webhookLeadRoute);
 app.post("/api/webhooks/whatsapp", webhookWhatsAppRoute);
 app.post("/api/webhooks/whatsapp/:event", webhookWhatsAppRoute);
+app.post("/webhooks/whatsapp", webhookWhatsAppRoute);
+app.post("/webhooks/whatsapp/:event", webhookWhatsAppRoute);
 
 app.setErrorHandler((error, _request, reply) => {
   if (error instanceof z.ZodError) {

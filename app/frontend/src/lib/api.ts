@@ -223,6 +223,16 @@ export const settingsApi = {
       method: 'POST',
     }),
 
+  configureWhatsAppWebhook: () =>
+    apiRequest<{
+      ok: boolean
+      message: string
+      webhookUrl?: string
+      details?: unknown
+    }>('/settings/whatsapp/configure-webhook', {
+      method: 'POST',
+    }),
+
   sendTestEmail: (to: string) =>
     apiRequest<{ ok: boolean; message: string }>('/settings/email/test', {
       method: 'POST',

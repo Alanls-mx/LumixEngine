@@ -2,11 +2,14 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  Check,
+  Copy,
   FileText,
   Mail,
   MessageCircle,
   Plus,
   QrCode,
+  RefreshCw,
   Save,
   Send,
   ShieldCheck,
@@ -136,6 +139,19 @@ export function SettingsPage() {
       toast.error(getApiErrorMessage(error, 'Falha ao verificar Evolution API'))
     },
   })
+
+  const configureWebhook = useMutation({
+    mutationFn: settingsApi.configureWhatsAppWebhook,
+    onSuccess: (response) => {
+      toast.success(response.message)
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Falha ao registrar webhook na Evolution API'))
+    },
+  })
+
+  const [copiedWebhook, setCopiedWebhook] = useState(false)
+  const webhookEndpointUrl = `${window.location.origin}/api/webhooks/whatsapp`
 
   const sendTestEmail = useMutation({
     mutationFn: settingsApi.sendTestEmail,
@@ -267,6 +283,53 @@ export function SettingsPage() {
                 }
                 placeholder="Chave global da Evolution API"
               />
+
+              {/* Webhook & Read Receipt Integration Info */}
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-600 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-800">
+                    Webhook de Entrada e Confirmação de Leitura
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(webhookEndpointUrl)
+                      setCopiedWebhook(true)
+                      toast.success('URL do Webhook copiada!')
+                      setTimeout(() => setCopiedWebhook(false), 2000)
+                    }}
+                    className="flex items-center gap-1 font-medium text-emerald-700 hover:text-emerald-800"
+                  >
+                    {copiedWebhook ? (
+                      <>
+                        <Check className="size-3.5" /> Copiado
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-3.5" /> Copiar URL
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="font-mono text-[11px] text-slate-600 bg-white p-2 rounded border border-slate-200 break-all select-all">
+                  {webhookEndpointUrl}
+                </p>
+                <p className="leading-relaxed text-slate-500 text-[11px]">
+                  Necessário para que as mensagens respondidas pelos clientes cheguem ao Inbox e para atualizar as confirmações de leitura (dois tracinhos azuis).
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-slate-300 text-slate-700 hover:bg-white text-xs"
+                  onClick={() => configureWebhook.mutate()}
+                  disabled={configureWebhook.isPending}
+                >
+                  <RefreshCw className={`size-3.5 mr-1.5 ${configureWebhook.isPending ? 'animate-spin' : ''}`} />
+                  {configureWebhook.isPending ? 'Sincronizando Webhook...' : 'Sincronizar Webhook na Evolution API'}
+                </Button>
+              </div>
+
               <Button
                 type="button"
                 variant="outline"
@@ -312,6 +375,16 @@ export function SettingsPage() {
               >
                 <MessageCircle aria-hidden="true" />
                 {verifyWhatsApp.isPending ? 'Verificando WhatsApp...' : 'Verificar WhatsApp'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => configureWebhook.mutate()}
+                disabled={configureWebhook.isPending}
+              >
+                <RefreshCw className={`size-4 mr-2 ${configureWebhook.isPending ? 'animate-spin' : ''}`} />
+                {configureWebhook.isPending ? 'Sincronizando...' : 'Sincronizar Webhook'}
               </Button>
               <Button
                 type="button"
